@@ -7,6 +7,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY })
 // SECURITY.md §입력 검증
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
 const MAX_PROMPT_LENGTH = 2000
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 // RELIABILITY.md §API 안정성
 const API_TIMEOUT_MS = 30_000
@@ -60,8 +61,14 @@ export async function POST(request: Request) {
       )
     }
 
-    // SECURITY.md §입력 검증 — 이미지 크기
+    // SECURITY.md §입력 검증 — 이미지 타입 및 크기
     for (const file of files) {
+      if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+        return NextResponse.json(
+          { error: `허용되지 않는 파일 형식입니다. JPEG, PNG, WebP만 가능합니다. (${file.name})` },
+          { status: 400 }
+        )
+      }
       if (file.size > MAX_IMAGE_SIZE) {
         return NextResponse.json(
           { error: `이미지 크기는 10MB 이하여야 합니다. (${file.name})` },

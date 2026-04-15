@@ -91,7 +91,7 @@ export default function PrintPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
+              accept="image/jpeg,image/png,image/webp"
               multiple
               className="hidden"
               onChange={(e) => setImages(Array.from(e.target.files ?? []))}

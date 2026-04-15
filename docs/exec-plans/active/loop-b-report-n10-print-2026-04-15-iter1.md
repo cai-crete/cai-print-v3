@@ -64,14 +64,23 @@ Defects found:
   [LOW]  page.tsx:94    — accept 속성에 image/gif 포함 (SECURITY.md 명세 외 타입)
 
 === V3.5: Code Reviewer Analysis ===
-code_quality_checker: SKIPPED (Python 인터프리터 미설치 — Windows Store stub 상태)
-pr_analyzer: SKIPPED (Python 미설치 + git 리포지토리 없음)
-수동 정적 분석:
-  security finding 1건: route.ts:63-70 — MIME 타입 미검증 → SECURITY.md §입력 검증 직접 위반 → FAIL 조건
-  style finding 1건: page.tsx:94 — image/gif 포함 → 비차단
+code_quality_checker: PASS (자동화 실행 완료 — Python 3.14.4)
+  Files scanned: 7 / Total issues: 502
+  - complexity (89건): deep_nesting — React/Next.js JSX 구조상 자연 발생. RELIABILITY.md 기준 없음. 비차단.
+  - debug (1건): route.ts:142 console.error('[API Error]', error) — RELIABILITY.md §에러 응답 처리가 요구하는 의도된 서버 로깅. 도구 오탐. 비차단.
+  - style (412건): trailing_whitespace — 교차검증 불필요. 비차단.
+  - security severity: 0건 ✓
 
-Blocking findings: [HIGH] route.ts:63-70 MIME 타입 미검증
-Report saved to: docs/exec-plans/active/loop-b-report-n10-print-2026-04-15-iter1.md (이 파일)
+pr_analyzer: SKIPPED (초기 커밋 1개만 존재 — 비교 대상 diff 없음. Iteration 2부터 활성화됨)
+
+RELIABILITY.md / SECURITY.md 교차검증:
+  security findings → 0건 → 자동화 기준 PASS
+  bug / error_handling RELIABILITY.md 위반 → 0건 → PASS
+  주의: 자동화 도구는 "누락된 검증 로직"을 탐지하지 않음.
+        V3 수동 보안 체크에서 발견한 MIME 타입 미검증(HIGH)은 V3 Security FAIL로 별도 처리됨.
+
+Blocking findings: none (자동화 기준)
+Report saved to: docs/exec-plans/active/code-review-n10-print-2026-04-15.md
 
 === V4: Stage B Simulation ===
 Test Case 1 (Normal — REPORT 4장): PASS — Protocol의 Pre-Step~Step 5 흐름이 명확히 정의되어 있고 각 Step 간 입출력 연결이 명시적임
