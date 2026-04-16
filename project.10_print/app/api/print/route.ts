@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { buildPrintSystemPrompt, PrintMode } from '@/lib/prompt'
+import { buildPrintSystemPrompt, loadTemplate, PrintMode } from '@/lib/prompt'
 import { GoogleGenAI } from '@google/genai'
 
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY })
@@ -110,7 +110,12 @@ export async function POST(request: Request) {
       throw new Error('[FATAL] 시스템 프롬프트 로드 실패')
     }
 
-    const userText = `Mode: ${mode}, PageCount: ${pageCount ?? 'N/A'}, Prompt: ${promptText}`
+    const templateHtml = loadTemplate(mode)
+    const templatePart = templateHtml
+      ? `\n\n[LAYOUT TEMPLATE]\n아래 HTML 템플릿의 시각 구조와 슬롯 배치를 유지하여 완성 HTML을 생성하라. <script> 태그는 브라우저 렌더링용이므로 콘텐츠 생성 시 무시한다. img-box 클래스 div는 이미지 슬롯이며 slotMapping에 기록한다.\n\n${templateHtml}`
+      : ''
+
+    const userText = `Mode: ${mode}, PageCount: ${pageCount ?? 'N/A'}, UserPrompt: ${promptText}${templatePart}`
 
     // RELIABILITY.md §API 안정성 — timeout 30s + 재시도 2회 지수 백오프
     const response = await withRetry(() =>
@@ -125,12 +130,26 @@ export async function POST(request: Request) {
             responseSchema: {
               type: 'OBJECT',
               properties: {
-                html: { type: 'STRING' },
+                // Protocol 6단계 실행 로그 — 각 Step이 실제로 수행됐는지 검증용
+                // DRAWING 모드의 step4는 "N/A (서사 생성 없음)"으로 반환
+                executionLog: {
+                  type: 'OBJECT',
+                  properties: {
+                    preStep: { type: 'STRING' }, // 이미지별 Category/Level/Score 분류 결과
+                    step1:   { type: 'STRING' }, // OCR 파싱 결과 (L3 없으면 "SKIPPED")
+                    step2:   { type: 'STRING' }, // masterData 확정 근거 (최빈값 채택 기록)
+                    step3:   { type: 'STRING' }, // 슬롯 배치 결정 (슬롯 ID ↔ 이미지 대응)
+                    step4:   { type: 'STRING' }, // 텍스트 생성 결과 또는 "N/A"
+                    step5:   { type: 'STRING' }, // 역방향 검증 결과 (모순 교체 기록)
+                  },
+                  required: ['preStep', 'step1', 'step2', 'step3', 'step4', 'step5'],
+                },
+                html:        { type: 'STRING' },
                 slotMapping: { type: 'OBJECT' },
-                masterData: { type: 'OBJECT' },
-                videoUri: { type: 'STRING', nullable: true },
+                masterData:  { type: 'OBJECT' },
+                videoUri:    { type: 'STRING', nullable: true },
               },
-              required: ['html', 'slotMapping', 'masterData'],
+              required: ['executionLog', 'html', 'slotMapping', 'masterData'],
             },
           },
         }),

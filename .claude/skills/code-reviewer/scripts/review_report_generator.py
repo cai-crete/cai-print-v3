@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import sys, io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+import os
+os.environ.setdefault('PYTHONIOENCODING', 'utf-8')
 """
 Review Report Generator - Combines PR analysis and code quality results
 into a single Markdown review report.
@@ -68,7 +67,7 @@ def _md_summary_table(pr: Optional[Dict], quality_files: int, quality_issues: Li
     if pr:
         s = pr.get('summary', {})
         rows += [
-            f"| Files changed  | {s.get('files_changed', '—')} |",
+            f"| Files changed  | {s.get('files_changed', '-')} |",
             f"| Lines added    | +{s.get('lines_added', 0)} |",
             f"| Lines removed  | -{s.get('lines_removed', 0)} |",
         ]
@@ -246,7 +245,7 @@ def main():
             except SystemExit as exc:
                 print(f'PR analysis skipped: {exc}')
         else:
-            print('No .git directory found — skipping PR analysis.')
+            print('No .git directory found -- skipping PR analysis.')
 
     # --- Load or compute quality data ---
     quality_issues: List[Dict] = []

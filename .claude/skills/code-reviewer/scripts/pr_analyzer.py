@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import os
+os.environ.setdefault('PYTHONIOENCODING', 'utf-8')
 """
 PR Analyzer - Analyzes git diffs and pull request changes.
 Supports local git repositories. For GitHub PRs, requires the `gh` CLI.
@@ -87,7 +90,7 @@ class PrAnalyzer:
     def _git(self, *args) -> str:
         cmd = ['git', '-C', str(self.repo_path)] + list(args)
         try:
-            return subprocess.check_output(cmd, stderr=subprocess.DEVNULL, text=True).strip()
+            return subprocess.check_output(cmd, stderr=subprocess.DEVNULL, text=True, encoding='utf-8', errors='replace').strip()
         except subprocess.CalledProcessError as exc:
             raise SystemExit(f"git command failed: {' '.join(cmd)}\n{exc}") from exc
 

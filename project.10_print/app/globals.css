@@ -1,1 +1,162 @@
 @import "tailwindcss";
+
+/* ==========================================================================
+   CAI CANVAS | PRINT ver.2 — Design Tokens
+   출처: project.10_print/_context/design-style-guide.md §3 · §5 · §9
+   COPYRIGHTS 2026. CRE-TE CO.,LTD. ALL RIGHTS RESERVED.
+   ========================================================================== */
+
+:root {
+  /* -------------------------------------------------------------------------
+     컬러 시스템 — 앱 인터페이스 (§A.3)
+     ------------------------------------------------------------------------- */
+  --color-black:      #000000;
+  --color-white:      #FFFFFF;
+  --color-gray-500:   #333333;   /* 보조 텍스트, 아이콘 */
+  --color-gray-400:   #666666;   /* 캡션, 힌트 */
+  --color-gray-300:   #999999;   /* 비활성 요소 */
+  --color-gray-200:   #CCCCCC;   /* 인터랙션 보더 (입력, 버튼) */
+  --color-gray-100:   #EEEEEE;   /* 구분선 (툴바, 사이드바, 헤더) */
+
+  --color-app-bg:     #F5F5F5;   /* 작업 영역 배경 */
+  --color-doc-bg:     var(--color-white);
+  --color-text-primary:   var(--color-black);
+  --color-text-secondary: var(--color-gray-500);
+  --color-text-caption:   var(--color-gray-400);
+
+  /* 템플릿용 포커스 컬러 (§B.2) */
+  --color-focus:      #007BFF;
+
+  /* -------------------------------------------------------------------------
+     UI 규격 토큰 (§A.4 · §A.6)
+     ------------------------------------------------------------------------- */
+  --header-h:           3.5rem;    /* 56px */
+  --sidebar-w:          18rem;     /* 288px */
+  --preview-h:          10rem;     /* 160px */
+  --gap-global:         1rem;      /* 16px */
+
+  /* 높이 기준 (§A.4) */
+  --h-cta-lg:           2.75rem;   /* 44px — Primary/Secondary CTA */
+  --h-ui-sm:            2.25rem;   /* 36px — Options, Tabs, Indicators */
+
+  /* 폰트 패밀리 */
+  --font-family-bebas:       var(--font-bebas), sans-serif;
+  --font-family-pretendard:  var(--font-pretendard), sans-serif;
+
+  /* -------------------------------------------------------------------------
+     컴포넌트 형태 토큰 (§9.2)
+     ------------------------------------------------------------------------- */
+  --radius-box:         0.625rem;  /* 10px — 모듈형 박스 (사이드바, 버튼, 입력 영역) */
+  --radius-pill:        5rem;      /* 80px — 캡슐형 요소 (CTA 버튼, 페이지 카운터) */
+
+  /* 그림자 */
+  --shadow-float: 0 10px 15px -3px rgba(0, 0, 0, 0.10),
+                  0 4px  6px  -4px rgba(0, 0, 0, 0.05);
+
+  /* -------------------------------------------------------------------------
+     레이아웃 보조 토큰
+     ------------------------------------------------------------------------- */
+  /**
+   * --sidebar-spacing: Canvas / PreviewStrip의 right 기준값.
+   * 사이드바(18rem) + right 여백(1rem) + 내부 여백(2.25rem) = 21.25rem (§9.1 스펙)
+   */
+  --sidebar-spacing: calc(var(--sidebar-w) + 3.25rem);
+
+  /* 이미지 플레이스홀더 배경 (§3.1) */
+  --color-placeholder: #F8F8F8;
+
+  /* 보더 토큰 — gray 스케일 의미적 별칭 */
+  --color-border:        var(--color-gray-200);  /* 인터랙션 보더 (#CCCCCC) */
+  --color-border-header: var(--color-gray-100);  /* 헤더/모달 구분선 (#EEEEEE) */
+
+  /* 캔버스 가이드라인 색상 (§3.1 비인쇄 정렬 보조선) */
+  --color-guide: rgba(0, 255, 255, 0.5);
+
+  /* -------------------------------------------------------------------------
+     Z-Index 계층 (§9.3)
+     ------------------------------------------------------------------------- */
+  --z-canvas:    0;
+  --z-system:    10;   /* 상단 고정 헤더 */
+  --z-preview:   20;   /* 하단 미리보기 스트립 */
+  --z-control:   90;   /* 우측 사이드바 */
+  --z-nav:       100;  /* 플로팅 메뉴 */
+  --z-modal:     1000; /* 툴바, 팝업 모달, 토스트 알림 */
+
+  /* -------------------------------------------------------------------------
+     문서 치수 토큰 — 출력용 (§4)
+     ------------------------------------------------------------------------- */
+  --doc-pad:        15mm;    /* 기본 문서 여백 */
+  --doc-gap-report: 5mm;     /* Report 콘텐츠 간격 */
+  --doc-gap-panel:  10mm;    /* Panel 콘텐츠 간격 */
+}
+
+/* ==========================================================================
+   기본 리셋 & 전역 베이스 스타일
+   ========================================================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family-pretendard);
+  color: var(--color-text-primary);
+  background-color: var(--color-app-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 폰트 유틸리티 */
+.font-bebas { font-family: var(--font-family-bebas); }
+.font-pretendard { font-family: var(--font-family-pretendard); }
+
+/* 타이포그래피 위계 (§A.2) */
+.text-ui-title { font-family: var(--font-family-bebas); font-size: 16pt; line-height: 1.0; letter-spacing: 0.03em; }
+.text-ui-subtitle { font-family: var(--font-family-bebas); font-size: 14pt; line-height: 1.0; letter-spacing: 0.03em; }
+.text-ui-body1 { font-family: var(--font-family-pretendard); font-size: 16pt; font-weight: 600; line-height: 1.4; }
+.text-ui-body2 { font-family: var(--font-family-pretendard); font-size: 16pt; font-weight: 400; line-height: 1.4; }
+.text-ui-body3 { font-family: var(--font-family-pretendard); font-size: 14pt; font-weight: 400; line-height: 1.4; }
+.text-ui-caption { font-family: var(--font-family-pretendard); font-size: 12pt; font-weight: 400; line-height: 1.2; }
+
+/* ==========================================================================
+   Print 렌더링 최적화 (design-style-guide.md §8)
+   ========================================================================== */
+
+@media print {
+  /* 비인쇄 요소 소거 */
+  header,
+  nav,
+  aside,
+  [data-toolbar],
+  [data-preview-strip],
+  [data-canvas-guide] {
+    display: none !important;
+  }
+
+  /* 문서 배경 유지 */
+  body {
+    background: white;
+  }
+}
+
+/* ==========================================================================
+   반응형 Breakpoint 보조 클래스
+   ========================================================================== */
+
+/* Tablet: 768px ~ 1023px */
+@media (max-width: 1023px) {
+  :root {
+    --sidebar-w: 0rem;    /* 태블릿: 사이드바 기본 접힘 */
+    --preview-h: 8rem;    /* 태블릿: 미리보기 높이 축소 */
+  }
+}
+
+/* Mobile: < 768px */
+@media (max-width: 767px) {
+  :root {
+    --preview-h: 0rem;    /* 모바일: 미리보기 숨김 */
+  }
+}

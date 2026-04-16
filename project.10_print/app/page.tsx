@@ -1,165 +1,410 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
-import VideoTemplate from '@/app/components/VideoTemplate'
+/**
+ * page.tsx — N10 print 노드 최상위 페이지 (State Orchestrator)
+ *
+ * 역할: 전체 앱 상태를 중앙에서 관리하고, 각 컴포넌트에 필요한 props만 주입한다.
+ * UI 렌더링·스타일링 로직은 각 컴포넌트에 위임한다.
+ * API 호출은 기존 /api/print Route를 그대로 경유한다.
+ *
+ * COPYRIGHTS 2026. CRE-TE CO.,LTD. ALL RIGHTS RESERVED.
+ */
 
-type PrintMode = 'REPORT' | 'PANEL' | 'DRAWING' | 'VIDEO'
+import React, { useState, useCallback } from 'react'
 
-interface PrintResult {
-  html: string
-  slotMapping: Record<string, unknown>
-  masterData: Record<string, unknown>
-  videoUri?: string | null
+// -- Layout
+import GlobalHeader    from '@/app/components/layout/GlobalHeader'
+import Toolbar         from '@/app/components/layout/Toolbar'
+import Sidebar         from '@/app/components/layout/Sidebar'
+import Canvas          from '@/app/components/layout/Canvas'
+import PreviewStrip    from '@/app/components/layout/PreviewStrip'
+
+// -- Sidebar sections
+import NodeSelector    from '@/app/components/sidebar/NodeSelector'
+import ImageInsert     from '@/app/components/sidebar/ImageInsert'
+import PurposeSelector from '@/app/components/sidebar/PurposeSelector'
+import PageCountControl from '@/app/components/sidebar/PageCountControl'
+import PromptInput     from '@/app/components/sidebar/PromptInput'
+import ActionButtons   from '@/app/components/sidebar/ActionButtons'
+
+// -- Modals
+import LibraryModal from '@/app/components/modals/LibraryModal'
+import SavesModal   from '@/app/components/modals/SavesModal'
+
+// -- Templates
+import ReportTemplate  from '@/app/components/templates/ReportTemplate'
+import PanelTemplate   from '@/app/components/templates/PanelTemplate'
+import DrawingTemplate from '@/app/components/templates/DrawingTemplate'
+import VideoTemplate   from '@/app/components/templates/VideoTemplate'
+
+// -- Types
+import type {
+  PrintMode,
+  PanelOrientation,
+  PrintResult,
+  HistoryEntry,
+  LibraryFolder,
+  LibraryImage,
+  SavedDocument,
+  ExportFormat,
+} from '@/lib/types'
+
+// =============================================================================
+// Helper — API 호출
+// =============================================================================
+
+async function callPrintApi(
+  mode: PrintMode,
+  images: File[],
+  videoStartImage: File | null,
+  videoEndImage: File | null,
+  prompt: string,
+  pageCount: number
+): Promise<PrintResult> {
+  const formData = new FormData()
+  formData.append('mode', mode)
+  formData.append('prompt', prompt)
+
+  if (mode === 'REPORT' || mode === 'PANEL' || mode === 'DRAWING') {
+    formData.append('pageCount', String(pageCount))
+    for (const image of images) {
+      formData.append('images', image)
+    }
+  } else if (mode === 'VIDEO') {
+    if (videoStartImage) formData.append('images', videoStartImage)
+    if (videoEndImage)   formData.append('images', videoEndImage)
+  }
+
+  const res = await fetch('/api/print', { method: 'POST', body: formData })
+  const data = await res.json()
+
+  if (!res.ok) {
+    throw new Error(data.error || '서버 오류가 발생했습니다.')
+  }
+
+  return data as PrintResult
 }
 
-export default function PrintPage() {
-  const [mode, setMode] = useState<PrintMode>('REPORT')
-  const [images, setImages] = useState<File[]>([])
-  const [prompt, setPrompt] = useState('')
-  const [pageCount, setPageCount] = useState(4)
-  const [result, setResult] = useState<PrintResult | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+// =============================================================================
+// Page Component
+// =============================================================================
 
-  const handleGenerate = async () => {
-    if (images.length === 0) {
-      setError('이미지를 최소 1장 업로드하세요.')
-      return
-    }
-    setLoading(true)
+export default function PrintPage() {
+  // -------------------------------------------------------------------------
+  // 상태 — 모드 & 설정
+  // -------------------------------------------------------------------------
+  const [mode, setMode]               = useState<PrintMode>('REPORT')
+  const [orientation, setOrientation] = useState<PanelOrientation>('LANDSCAPE')
+  const [prompt, setPrompt]           = useState('')
+  const [pageCount, setPageCount]     = useState(6)
+
+  // -------------------------------------------------------------------------
+  // 상태 — 이미지 입력
+  // -------------------------------------------------------------------------
+  const [images, setImages]                   = useState<File[]>([])
+  const [videoStartImage, setVideoStartImage] = useState<File | null>(null)
+  const [videoEndImage, setVideoEndImage]     = useState<File | null>(null)
+
+  // -------------------------------------------------------------------------
+  // 상태 — 결과
+  // -------------------------------------------------------------------------
+  const [result, setResult]         = useState<PrintResult | null>(null)
+  const [currentPage, setCurrentPage] = useState(0)
+
+  // -------------------------------------------------------------------------
+  // 상태 — UI
+  // -------------------------------------------------------------------------
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [error, setError]               = useState<string | null>(null)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false)
+  const [isSavesOpen, setIsSavesOpen]     = useState(false)
+
+  // -------------------------------------------------------------------------
+  // 상태 — Undo / Redo 히스토리
+  // -------------------------------------------------------------------------
+  const [history, setHistory]           = useState<HistoryEntry[]>([])
+  const [historyIndex, setHistoryIndex] = useState(-1)
+
+  // =========================================================================
+  // 핸들러 — 모드 변경
+  // =========================================================================
+
+  const handleModeChange = useCallback((newMode: PrintMode) => {
+    setMode(newMode)
+    setResult(null)
     setError(null)
+    setCurrentPage(0)
+  }, [])
+
+  // =========================================================================
+  // 핸들러 — GENERATE
+  // =========================================================================
+
+  const handleGenerate = useCallback(async () => {
+    // 이미지 검증
+    if (mode === 'VIDEO') {
+      if (!videoStartImage || !videoEndImage) {
+        setError('VIDEO 모드는 Start 이미지와 End 이미지를 모두 선택해야 합니다.')
+        return
+      }
+    } else {
+      if (images.length === 0) {
+        setError('이미지를 최소 1장 업로드하세요.')
+        return
+      }
+    }
+
+    setIsGenerating(true)
+    setError(null)
+
     try {
-      const formData = new FormData()
-      formData.append('mode', mode)
-      formData.append('prompt', prompt)
-      if (mode === 'REPORT' || mode === 'PANEL') {
-        formData.append('pageCount', String(pageCount))
+      const data = await callPrintApi(
+        mode, images, videoStartImage, videoEndImage, prompt, pageCount
+      )
+      setResult(data)
+      setCurrentPage(0)
+
+      // 히스토리 스택에 추가 (향후 Undo/Redo 기반)
+      if (data.html) {
+        const entry: HistoryEntry = {
+          html: data.html,
+          slotMapping: data.slotMapping,
+          masterData: data.masterData,
+          timestamp: Date.now(),
+        }
+        setHistory((prev) => [...prev.slice(0, historyIndex + 1), entry])
+        setHistoryIndex((prev) => prev + 1)
       }
-      for (const image of images) {
-        formData.append('images', image)
-      }
-      const res = await fetch('/api/print', { method: 'POST', body: formData })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || '서버 오류가 발생했습니다.')
-      } else {
-        setResult(data as PrintResult)
-      }
-    } catch {
-      setError('네트워크 오류가 발생했습니다.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
     } finally {
-      setLoading(false)
+      setIsGenerating(false)
+    }
+  }, [mode, images, videoStartImage, videoEndImage, prompt, pageCount, historyIndex])
+
+  // =========================================================================
+  // 핸들러 — Undo / Redo (기반 구조만, Stage 2에서 완성)
+  // =========================================================================
+
+  const canUndo = historyIndex > 0
+  const canRedo = historyIndex < history.length - 1
+
+  const handleUndo = useCallback(() => {
+    if (!canUndo) return
+    const prev = history[historyIndex - 1]
+    setResult((r) => r ? { ...r, html: prev.html, slotMapping: prev.slotMapping } : null)
+    setHistoryIndex((i) => i - 1)
+  }, [canUndo, history, historyIndex])
+
+  const handleRedo = useCallback(() => {
+    if (!canRedo) return
+    const next = history[historyIndex + 1]
+    setResult((r) => r ? { ...r, html: next.html, slotMapping: next.slotMapping } : null)
+    setHistoryIndex((i) => i + 1)
+  }, [canRedo, history, historyIndex])
+
+  // =========================================================================
+  // 핸들러 — NEW PROJECT
+  // =========================================================================
+
+  const handleNewProject = useCallback(() => {
+    setMode('REPORT')
+    setOrientation('LANDSCAPE')
+    setImages([])
+    setVideoStartImage(null)
+    setVideoEndImage(null)
+    setPrompt('')
+    setPageCount(6)
+    setResult(null)
+    setCurrentPage(0)
+    setError(null)
+    setHistory([])
+    setHistoryIndex(-1)
+  }, [])
+
+  // =========================================================================
+  // 핸들러 — EXPORT (Stage 2 구현 예정)
+  // =========================================================================
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleExport = useCallback((_format: ExportFormat) => {
+    // Stage 2 구현 예정
+  }, [])
+
+  // =========================================================================
+  // 핸들러 — Library 이미지 선택 (Stage 2 구현 예정)
+  // =========================================================================
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleLibrarySelectImage = useCallback((_img: LibraryImage) => {
+    // Stage 2 구현 예정
+  }, [])
+
+  // =========================================================================
+  // 핸들러 — Saves (Stage 2 구현 예정)
+  // =========================================================================
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleSavesOpen = useCallback((_doc: SavedDocument) => {
+    // Stage 2 구현 예정
+  }, [])
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleSavesDelete = useCallback((_docId: string) => {
+    // Stage 2 구현 예정
+  }, [])
+
+  // =========================================================================
+  // Generate 조건: canGenerate
+  // =========================================================================
+
+  const canGenerate = mode === 'VIDEO'
+    ? (videoStartImage !== null && videoEndImage !== null)
+    : images.length > 0
+
+  // =========================================================================
+  // 페이지별 HTML 추출 (PreviewStrip용)
+  // =========================================================================
+
+  const pages: string[] = result?.html ? [result.html] : []
+
+  // =========================================================================
+  // 문서 렌더러 선택
+  // =========================================================================
+
+  function renderDocument() {
+    if (!result) return null
+
+    const commonProps = {
+      html: result.html ?? '',
+      slotMapping: result.slotMapping,
+      masterData: result.masterData,
+      pageIndex: currentPage,
+    }
+
+    switch (mode) {
+      case 'REPORT':
+        return <ReportTemplate {...commonProps} />
+      case 'PANEL':
+        return <PanelTemplate {...commonProps} orientation={orientation} />
+      case 'DRAWING':
+        return <DrawingTemplate {...commonProps} />
+      case 'VIDEO':
+        return <VideoTemplate videoUri={result.videoUri ?? null} />
     }
   }
 
+  // =========================================================================
+  // Render
+  // =========================================================================
+
   return (
-    <div className="relative min-h-screen bg-[#F5F5F5] overflow-hidden text-[#000000]">
-      {/* 1. Global Header (System Layer: 10) */}
-      <header className="absolute top-0 left-0 right-0 h-14 bg-white border-b border-[#EEEEEE] flex items-center px-6 z-10">
-        <h1 className="text-xl font-[800] tracking-tighter">CAI CANVAS | PRINT</h1>
-      </header>
+    <>
+      {/* 1. 상단 헤더 */}
+      <GlobalHeader
+        status={isGenerating ? 'generating' : error ? 'error' : 'idle'}
+      />
 
-      {/* 2. Floating Nav (Nav Layer: 100) */}
-      <nav className="absolute top-[4.5rem] right-4 w-72 h-11 bg-white rounded-[10px] shadow-lg flex items-center px-4 z-[100]">
-        <div className="flex space-x-4 text-sm font-medium">
-          {(['REPORT', 'PANEL', 'DRAWING', 'VIDEO'] as PrintMode[]).map((m) => (
-            <button
-              key={m}
-              className={mode === m ? 'text-[#007BFF]' : 'text-[#666666]'}
-              onClick={() => { setMode(m); setResult(null); setError(null) }}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-      </nav>
+      {/* 2. 좌측 플로팅 툴바 */}
+      <Toolbar
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onOpenLibrary={() => setIsLibraryOpen(true)}
+        onOpenSaves={() => setIsSavesOpen(true)}
+        onNewProject={handleNewProject}
+      />
 
-      {/* 3. Primary Sidebar (Control Layer: 90) */}
-      <aside className="absolute top-[8rem] bottom-4 right-4 w-72 bg-white rounded-[10px] shadow-lg p-5 z-[90] flex flex-col">
-        <h2 className="text-lg font-bold mb-4 border-b border-dashed border-[#CCCCCC] pb-2">Properties</h2>
+      {/* 3. 중앙 캔버스 */}
+      <Canvas
+        mode={mode}
+        isEmpty={!result}
+        isLoading={isGenerating}
+      >
+        {renderDocument()}
+      </Canvas>
 
-        <div className="flex-1 space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-[#333333] mb-1">Images</label>
-            <div
-              className="w-full h-24 bg-[#F8F8F8] border border-dashed border-[#CCCCCC] rounded-[10px] flex items-center justify-center text-sm text-[#666666] cursor-pointer hover:border-[#007BFF]"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {images.length > 0 ? `${images.length}장 선택됨` : '+ Upload Images'}
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              className="hidden"
-              onChange={(e) => setImages(Array.from(e.target.files ?? []))}
+      {/* 4. 하단 페이지 미리보기 바 */}
+      <PreviewStrip
+        pages={pages}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+      />
+
+      {/* 5. 우측 사이드바 */}
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onToggle={() => setIsSidebarOpen((v) => !v)}
+        headerSlot={<NodeSelector currentNode="PRINT" />}
+        contentSlot={
+          <div className="flex flex-col gap-4">
+            {/* INSERT IMAGE */}
+            <ImageInsert
+              mode={mode}
+              images={images}
+              onImagesChange={setImages}
+              videoStartImage={videoStartImage}
+              videoEndImage={videoEndImage}
+              onVideoStartChange={setVideoStartImage}
+              onVideoEndChange={setVideoEndImage}
             />
-          </div>
 
-          {(mode === 'REPORT' || mode === 'PANEL') && (
-            <div>
-              <label className="block text-sm font-semibold text-[#333333] mb-1">Page Count</label>
-              <input
-                type="number"
-                value={pageCount}
-                min={1}
-                onChange={(e) => setPageCount(parseInt(e.target.value) || 1)}
-                className="w-full border border-[#CCCCCC] rounded-[10px] p-2 text-sm focus:outline-none focus:border-[#007BFF]"
-              />
-            </div>
-          )}
+            {/* PURPOSE */}
+            <PurposeSelector
+              mode={mode}
+              orientation={orientation}
+              onModeChange={handleModeChange}
+              onOrientationChange={setOrientation}
+            />
 
-          <div>
-            <label className="block text-sm font-semibold text-[#333333] mb-1">Prompt (Theme)</label>
-            <textarea
-              placeholder="e.g. 고층 오피스 외부에서..."
+            {/* NUMBER OF PAGES */}
+            <PageCountControl
+              mode={mode}
+              value={pageCount}
+              onChange={setPageCount}
+            />
+
+            {/* PROMPT */}
+            <PromptInput
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              className="w-full border border-[#CCCCCC] rounded-[10px] p-2 text-sm h-24 focus:outline-none focus:border-[#007BFF] resize-none"
+              onChange={setPrompt}
             />
+
+            {/* 에러 메시지 */}
+            {error && (
+              <p className="text-xs text-red-500 leading-relaxed">{error}</p>
+            )}
           </div>
+        }
+        footerSlot={
+          <ActionButtons
+            canGenerate={canGenerate}
+            isGenerating={isGenerating}
+            canExport={!!result}
+            onGenerate={handleGenerate}
+            onExport={handleExport}
+          />
+        }
+      />
 
-          {error && (
-            <p className="text-xs text-red-500">{error}</p>
-          )}
-        </div>
+      {/* 6. 모달 — Library */}
+      <LibraryModal
+        isOpen={isLibraryOpen}
+        onClose={() => setIsLibraryOpen(false)}
+        folders={[] as LibraryFolder[]}
+        onSelectImage={handleLibrarySelectImage}
+      />
 
-        <button
-          onClick={handleGenerate}
-          disabled={loading}
-          className="mt-4 w-full h-[40px] rounded-full bg-[#007BFF] text-white font-bold text-sm shadow-md hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Generating...' : `Generate ${mode}`}
-        </button>
-      </aside>
-
-      {/* 4. Preview Strip (Preview Layer: 20) */}
-      <div className="absolute bottom-4 left-4 right-[21.25rem] h-40 bg-white rounded-[10px] shadow-lg p-4 z-[20] flex items-center space-x-4 overflow-x-auto border border-[#EEEEEE]">
-        <div className="text-[#666666] text-sm">
-          {result ? '생성 완료' : 'Preview Generation Results'}
-        </div>
-      </div>
-
-      {/* 5. Canvas Layer (Base) */}
-      <main className="absolute inset-0 pt-14 overflow-hidden flex items-center justify-center p-8 z-0">
-        <div className="w-full h-full max-w-[800px] bg-white shadow-xl relative overflow-auto flex items-center justify-center text-[#CCCCCC]">
-          <div className="absolute inset-0 pointer-events-none border border-dashed border-[rgba(0,255,255,0.5)] m-4"></div>
-          {result ? (
-            mode === 'VIDEO' ? (
-              <VideoTemplate videoUri={result.videoUri ?? null} />
-            ) : (
-              <div
-                className="w-full h-full p-4 text-black"
-                dangerouslySetInnerHTML={{ __html: result.html }}
-              />
-            )
-          ) : (
-            `[ ${mode} Document Canvas Area ]`
-          )}
-        </div>
-      </main>
-    </div>
+      {/* 7. 모달 — Saves */}
+      <SavesModal
+        isOpen={isSavesOpen}
+        onClose={() => setIsSavesOpen(false)}
+        documents={[] as SavedDocument[]}
+        onOpen={handleSavesOpen}
+        onDelete={handleSavesDelete}
+      />
+    </>
   )
 }
