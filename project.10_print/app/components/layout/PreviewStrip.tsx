@@ -12,6 +12,11 @@
  */
 
 import React, { useState, useRef } from 'react'
+import type { PrintMode, PanelOrientation } from '@/lib/types'
+import { DOC_SIZE, docSizeKey } from '@/app/components/templates/DocumentFrame'
+
+const THUMB_W = 80  // 5rem
+const THUMB_H = 64  // 4rem
 
 interface PreviewStripProps {
   /** 각 페이지의 HTML 문자열 목록 (빈 배열이면 empty 상태) */
@@ -20,6 +25,10 @@ interface PreviewStripProps {
   currentPage: number
   /** 페이지 변경 핸들러 */
   onPageChange: (page: number) => void
+  /** 현재 문서 모드 — 썸네일 스케일 계산에 사용 */
+  mode: PrintMode
+  /** PANEL 모드 용지 방향 */
+  orientation?: PanelOrientation
 }
 
 /** 페이지 썸네일 카드 */
@@ -27,13 +36,19 @@ function PageThumbnail({
   index,
   isActive,
   html,
+  docW,
+  docH,
   onClick,
 }: {
   index: number
   isActive: boolean
   html: string
+  docW: number
+  docH: number
   onClick: () => void
 }) {
+  const thumbScale = Math.min(THUMB_W / docW, THUMB_H / docH)
+
   return (
     <button
       onClick={onClick}
@@ -44,22 +59,25 @@ function PageThumbnail({
       <div
         className="overflow-hidden transition-all"
         style={{
-          width: '5rem',       /* 80px */
-          height: '4rem',      /* 64px */
+          width: THUMB_W,
+          height: THUMB_H,
           borderRadius: '4px',
           backgroundColor: 'var(--color-doc-bg)',
           border: isActive
             ? '2px solid var(--color-text-primary)'
             : '1px solid var(--color-border)',
           boxShadow: isActive ? 'var(--shadow-float)' : 'none',
-          transformOrigin: 'center',
         }}
       >
-        {/* HTML 미리보기 (Stage 2에서 실제 iframe 렌더링으로 교체 예정) */}
         {html ? (
           <div
-            className="w-full h-full pointer-events-none select-none"
-            style={{ transform: 'scale(0.12)', transformOrigin: 'top left', width: '833%' }}
+            className="pointer-events-none select-none"
+            style={{
+              width: docW,
+              height: docH,
+              transform: `scale(${thumbScale})`,
+              transformOrigin: 'top left',
+            }}
             dangerouslySetInnerHTML={{ __html: html }}
           />
         ) : (
@@ -123,12 +141,17 @@ export default function PreviewStrip({
   pages,
   currentPage,
   onPageChange,
+  mode,
+  orientation = 'LANDSCAPE',
 }: PreviewStripProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [isEditingPage, setIsEditingPage] = useState(false)
   const [inputValue, setInputValue] = useState('')
 
   const totalPages = pages.length
+
+  // 모드별 문서 물리 치수 — PageThumbnail 스케일 계산에 전달
+  const { w: docW, h: docH } = DOC_SIZE[docSizeKey(mode, orientation)] ?? DOC_SIZE.REPORT
 
   /** 리스트 좌측 끝으로 이동 */
   const scrollLeft = () => {
@@ -213,6 +236,8 @@ export default function PreviewStrip({
                 index={idx}
                 isActive={idx === currentPage}
                 html={html}
+                docW={docW}
+                docH={docH}
                 onClick={() => onPageChange(idx)}
               />
             ))}

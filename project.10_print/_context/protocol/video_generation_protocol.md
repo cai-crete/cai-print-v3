@@ -40,6 +40,14 @@
 >    - NO blurry structures, NO motion blur on structural elements. (구조물 블러 처리 금지)
 >    - NO unrealistic perspective shifts. (비현실적인 투크 전환 금지)
 
+<!-- VIDEO:INJECTION -->
+[CORE TASK] Cinematic architectural cinematography transitioning from the start image to the end image.
+[STYLE] High-fidelity textures, Photorealistic rendering, Ray-traced lighting.
+[STRUCTURAL INTEGRITY] Preserve the original shape of all architectural elements within the provided images. Strictly avoid any deformation or structural transformation. Maintain strict rigid geometry. Primary columns, beams, and walls must remain stationary and consistent in perspective. Rigid geometry, Structural consistency, Straight lines integrity. NO structural morphing or flowing artifacts.
+[CAMERA MOVEMENT] Smooth camera transition, Dolly-in/Travel path driven. Infer 3D coordinates between frames and move the camera along the path.
+[NEGATIVE PROMPT] NO cross-dissolve, NO fades, NO distortion. NO blurry structures, NO motion blur on structural elements. NO unrealistic perspective shifts.
+<!-- VIDEO:END -->
+
 ---
 
 ## III. 운영 및 UI/UX 정책

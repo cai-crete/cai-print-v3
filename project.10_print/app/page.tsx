@@ -10,7 +10,7 @@
  * COPYRIGHTS 2026. CRE-TE CO.,LTD. ALL RIGHTS RESERVED.
  */
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 
 // -- Layout
 import GlobalHeader    from '@/app/components/layout/GlobalHeader'
@@ -48,6 +48,12 @@ import type {
   SavedDocument,
   ExportFormat,
 } from '@/lib/types'
+
+// -- Export
+import { exportDocument } from '@/lib/export'
+
+// -- Saves
+import { savesGet, savesSave, savesDelete } from '@/lib/saves'
 
 // =============================================================================
 // Helper — API 호출
@@ -115,10 +121,14 @@ export default function PrintPage() {
   // 상태 — UI
   // -------------------------------------------------------------------------
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isExporting, setIsExporting]   = useState(false)
   const [error, setError]               = useState<string | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const [isLibraryOpen, setIsLibraryOpen] = useState(false)
-  const [isSavesOpen, setIsSavesOpen]     = useState(false)
+  const [isLibraryOpen, setIsLibraryOpen]       = useState(false)
+  const [isSavesOpen, setIsSavesOpen]           = useState(false)
+  const [libraryFolders, setLibraryFolders]     = useState<LibraryFolder[]>([])
+  const [isLibraryLoading, setIsLibraryLoading] = useState(false)
+  const [savedDocuments, setSavedDocuments]     = useState<SavedDocument[]>([])
 
   // -------------------------------------------------------------------------
   // 상태 — Undo / Redo 히스토리
@@ -227,32 +237,99 @@ export default function PrintPage() {
   // 핸들러 — EXPORT (Stage 2 구현 예정)
   // =========================================================================
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleExport = useCallback((_format: ExportFormat) => {
-    // Stage 2 구현 예정
+  const handleExport = useCallback(async (format: ExportFormat) => {
+    if (!result) return
+    setIsExporting(true)
+    setError(null)
+    try {
+      await exportDocument(
+        result.html ?? '',
+        mode,
+        orientation,
+        format,
+        result.videoUri
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'EXPORT 중 오류가 발생했습니다.')
+    } finally {
+      setIsExporting(false)
+    }
+  }, [result, mode, orientation])
+
+  // =========================================================================
+  // 핸들러 — Library 열기 (지연 로딩)
+  // =========================================================================
+
+  const handleOpenLibrary = useCallback(async () => {
+    setIsLibraryOpen(true)
+    if (libraryFolders.length > 0 || isLibraryLoading) return
+    setIsLibraryLoading(true)
+    try {
+      const res  = await fetch('/api/library')
+      const data = await res.json()
+      setLibraryFolders(data as LibraryFolder[])
+    } catch {
+      // 조용히 실패 — 빈 상태 표시
+    } finally {
+      setIsLibraryLoading(false)
+    }
+  }, [libraryFolders.length, isLibraryLoading])
+
+  // =========================================================================
+  // 핸들러 — Library 이미지 선택
+  // =========================================================================
+
+  const handleLibrarySelectImage = useCallback(async (img: LibraryImage) => {
+    try {
+      const res  = await fetch(img.url)
+      const blob = await res.blob()
+      const file = new File([blob], img.name, { type: blob.type })
+      setImages((prev) => [...prev, file])
+    } catch {
+      setError('라이브러리 이미지를 불러오는 데 실패했습니다.')
+    }
   }, [])
 
   // =========================================================================
-  // 핸들러 — Library 이미지 선택 (Stage 2 구현 예정)
+  // 핸들러 — Saves
   // =========================================================================
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleLibrarySelectImage = useCallback((_img: LibraryImage) => {
-    // Stage 2 구현 예정
+  // mount 시 localStorage에서 목록 로드
+  useEffect(() => {
+    setSavedDocuments(savesGet())
   }, [])
 
-  // =========================================================================
-  // 핸들러 — Saves (Stage 2 구현 예정)
-  // =========================================================================
+  const handleSave = useCallback(() => {
+    if (!result) return
+    const doc: SavedDocument = {
+      id:        `${Date.now()}`,
+      title:     `${mode} 문서`,
+      mode,
+      pageCount,
+      result,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    savesSave(doc)
+    setSavedDocuments(savesGet())
+  }, [result, mode, pageCount])
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleSavesOpen = useCallback((_doc: SavedDocument) => {
-    // Stage 2 구현 예정
+  const handleOpenSaves = useCallback(() => {
+    setSavedDocuments(savesGet())
+    setIsSavesOpen(true)
   }, [])
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleSavesDelete = useCallback((_docId: string) => {
-    // Stage 2 구현 예정
+  const handleSavesOpen = useCallback((doc: SavedDocument) => {
+    setMode(doc.mode)
+    setPageCount(doc.pageCount)
+    setResult(doc.result)
+    setCurrentPage(0)
+    setError(null)
+  }, [])
+
+  const handleSavesDelete = useCallback((docId: string) => {
+    savesDelete(docId)
+    setSavedDocuments(savesGet())
   }, [])
 
   // =========================================================================
@@ -312,8 +389,9 @@ export default function PrintPage() {
         canRedo={canRedo}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        onOpenLibrary={() => setIsLibraryOpen(true)}
-        onOpenSaves={() => setIsSavesOpen(true)}
+        onOpenLibrary={handleOpenLibrary}
+        onOpenSaves={handleOpenSaves}
+        onSave={handleSave}
         onNewProject={handleNewProject}
       />
 
@@ -331,6 +409,8 @@ export default function PrintPage() {
         pages={pages}
         currentPage={currentPage}
         onPageChange={setCurrentPage}
+        mode={mode}
+        orientation={orientation}
       />
 
       {/* 5. 우측 사이드바 */}
@@ -339,7 +419,7 @@ export default function PrintPage() {
         onToggle={() => setIsSidebarOpen((v) => !v)}
         headerSlot={<NodeSelector currentNode="PRINT" />}
         contentSlot={
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-8">
             {/* INSERT IMAGE */}
             <ImageInsert
               mode={mode}
@@ -383,6 +463,8 @@ export default function PrintPage() {
             canGenerate={canGenerate}
             isGenerating={isGenerating}
             canExport={!!result}
+            isExporting={isExporting}
+            mode={mode}
             onGenerate={handleGenerate}
             onExport={handleExport}
           />
@@ -393,7 +475,7 @@ export default function PrintPage() {
       <LibraryModal
         isOpen={isLibraryOpen}
         onClose={() => setIsLibraryOpen(false)}
-        folders={[] as LibraryFolder[]}
+        folders={libraryFolders}
         onSelectImage={handleLibrarySelectImage}
       />
 
@@ -401,7 +483,7 @@ export default function PrintPage() {
       <SavesModal
         isOpen={isSavesOpen}
         onClose={() => setIsSavesOpen(false)}
-        documents={[] as SavedDocument[]}
+        documents={savedDocuments}
         onOpen={handleSavesOpen}
         onDelete={handleSavesDelete}
       />

@@ -40,12 +40,12 @@ export default function PurposeSelector({
   return (
     <div>
       {/* 섹션 헤더 */}
-      <span className="block mb-2 text-ui-subtitle tracking-widest text-[--color-gray-400]">
+      <span className="block mb-4 text-ui-subtitle tracking-widest text-[--color-gray-400]">
         PURPOSE
       </span>
 
       {/* 모드 선택 버튼 목록 */}
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         {MODES.map((m) => {
           const isActive = mode === m
           return (
@@ -54,13 +54,13 @@ export default function PurposeSelector({
               onClick={() => onModeChange(m)}
               className="w-full text-ui-title transition-all flex items-center justify-center pt-0.5"
               style={{
-                height: 'var(--h-ui-sm)',
+                height: 'var(--h-cta-lg)',
                 borderRadius: 'var(--radius-box)',
                 border: isActive
                   ? '1.5px solid var(--color-black)'
                   : '1.5px solid var(--color-gray-200)',
                 backgroundColor: isActive
-                  ? 'var(--color-gray-200)'
+                  ? 'var(--color-gray-100)'
                   : 'var(--color-white)',
                 color: 'var(--color-black)',
                 cursor: 'pointer',
@@ -75,7 +75,7 @@ export default function PurposeSelector({
       {/* PANEL 선택 시: LANDSCAPE / PORTRAIT 서브 토글 */}
       {mode === 'PANEL' && (
         <div
-          className="flex gap-1 mt-2"
+          className="flex gap-2 mt-4"
         >
           {(['LANDSCAPE', 'PORTRAIT'] as PanelOrientation[]).map((o) => {
             const isActive = orientation === o
@@ -85,13 +85,13 @@ export default function PurposeSelector({
                 onClick={() => onOrientationChange(o)}
                 className="flex-1 text-ui-title transition-all flex items-center justify-center pt-0.5"
                 style={{
-                  height: 'var(--h-ui-sm)',
+                  height: 'var(--h-cta-lg)',
                   borderRadius: 'var(--radius-box)',
                   border: isActive
                     ? '1.5px solid var(--color-black)'
                     : '1.5px solid var(--color-gray-200)',
                   backgroundColor: isActive
-                    ? 'var(--color-gray-200)'
+                    ? 'var(--color-gray-100)'
                     : 'var(--color-white)',
                   color: 'var(--color-black)',
                   cursor: 'pointer',

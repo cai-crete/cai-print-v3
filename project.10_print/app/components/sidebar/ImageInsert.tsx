@@ -229,7 +229,7 @@ export default function ImageInsert({
   return (
     <div>
       {/* 섹션 헤더 */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-4">
         <span className="text-ui-subtitle tracking-widest text-[--color-gray-400]">
           INSERT IMAGE
         </span>

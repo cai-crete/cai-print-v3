@@ -25,8 +25,8 @@ export default function NodeSelector({ currentNode = 'PRINT' }: NodeSelectorProp
       <div
         className="flex items-center gap-1 flex-1 min-w-0"
         style={{
-          height: 'var(--h-ui-sm)',
-          border: '1px solid var(--color-gray-200)',
+          height: 'var(--h-cta-lg)',
+          border: 'none',
           borderRadius: 'var(--radius-box)',
           padding: '0 0.625rem',
           backgroundColor: 'transparent',

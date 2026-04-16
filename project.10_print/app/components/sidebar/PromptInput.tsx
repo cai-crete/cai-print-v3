@@ -29,7 +29,7 @@ export default function PromptInput({
   return (
     <div>
       {/* 섹션 헤더 */}
-      <span className="block mb-2 text-ui-subtitle tracking-widest text-[--color-gray-400]">
+      <span className="block mb-4 text-ui-subtitle tracking-widest text-[--color-gray-400]">
         PROMPT
       </span>
 

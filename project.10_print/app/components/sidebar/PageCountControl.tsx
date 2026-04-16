@@ -45,14 +45,14 @@ export default function PageCountControl({
   return (
     <div>
       {/* 섹션 헤더 */}
-      <span className="block mb-2 text-ui-subtitle tracking-widest text-[--color-gray-400]">
+      <span className="block mb-4 text-ui-subtitle tracking-widest text-[--color-gray-400]">
         NUMBER OF PAGES
       </span>
 
       <div
         className="flex items-center justify-between"
         style={{
-          height: 'var(--h-ui-sm)',
+          height: 'var(--h-cta-lg)',
           border: '1px solid var(--color-gray-200)',
           borderRadius: 'var(--radius-pill)',
           padding: '0 0.5rem',

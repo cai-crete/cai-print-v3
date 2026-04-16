@@ -36,8 +36,9 @@
   --gap-global:         1rem;      /* 16px */
 
   /* 높이 기준 (§A.4) */
-  --h-cta-lg:           2.75rem;   /* 44px — Primary/Secondary CTA */
-  --h-ui-sm:            2.25rem;   /* 36px — Options, Tabs, Indicators */
+  --h-cta-xl:           3.25rem;   /* 52px — Primary/Secondary CTA */
+  --h-cta-lg:           2.75rem;   /* 44px — Options, Tabs, Icon Buttons, Indicators */
+  --h-cta-sm:           2.25rem;   /* 36px — secondary-small 전용 (예외. 모달 내부 전용) */
 
   /* 폰트 패밀리 */
   --font-family-bebas:       var(--font-bebas), sans-serif;
