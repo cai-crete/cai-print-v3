@@ -1,8 +1,8 @@
 ---
 LOOP B HANDOFF — n10-print
 Written by: Execution Agent
-Date: 2026-04-16
-Iteration: 3
+Date: 2026-04-17
+Iteration: 4 (Stage 3~6 완료 반영)
 ---
 
 ## What I Built / Fixed
@@ -177,14 +177,29 @@ Iteration: 3
 4. **Library/Saves 모달 정적 (Stage 4-5 예정)**
    LibraryModal, SavesModal이 빈 배열을 props로 받고 있다.
 
-## Remaining Stages
+## Completed Stages (전체)
 
 | Stage | 내용 | 상태 |
 |-------|------|------|
-| Stage 3 | EXPORT (PDF/JPG/PNG) | 미착수 |
-| Stage 4 | Library Modal — `/api/library` + `sources/library/` 연동 | 미착수 |
-| Stage 5 | Saves — localStorage 저장/불러오기 | 미착수 |
-| Stage 6 | VIDEO — Veo API 연동 | 미착수 |
+| Stage 0 | 환경 안정화, API 연동, RELIABILITY/SECURITY 기준 충족 | ✅ DEPLOYMENT APPROVED (Iter 2) |
+| Stage 1 | HTML 템플릿 → Gemini 레이아웃 참조 연동 | ✅ 완료 |
+| Stage 2 | 문서 렌더링 — 모드별 물리 치수 기반 자동 스케일링 | ✅ 완료 |
+| Stage 3 | EXPORT (PDF/JPG/PNG) — `lib/export.ts` | ✅ 완료 |
+| Stage 4 | Library Modal — `/api/library` + `sources/library/` 연동 | ✅ 완료 |
+| Stage 5 | Saves — localStorage 저장/불러오기 | ✅ 완료 |
+| Stage 6 | VIDEO — Veo 3.1 API 연동, VIDEO:INJECTION 프롬프트 주입 | ✅ 완료 |
+
+## Post-Stage 개선 작업 (2026-04-17)
+
+| 항목 | 내용 | 상태 |
+|------|------|------|
+| Protocol v4.0 전환 | v3.2 → Multi-Agent(AGENT-1/2/3) 파이프라인, 4단계 순차 실행 | ✅ 완료 |
+| 이미지 크기 제한 상향 | MAX_IMAGE_SIZE 10MB → 20MB | ✅ 완료 |
+| 이미지 압축 로직 | `lib/imageUtils.ts` — Canvas API WebP 변환, 3개 업로드 경로 적용 | ✅ 완료 |
+| 에이전트 오류 격리 | `lib/agentErrors.ts` — AgentError, validateSchema, 4단계 개별 try-catch | ✅ 완료 |
+| 프론트엔드 에러 UI | `page.tsx` — agentError 사이드바 패널 + 헤더 배너 이중 체계, alert() 제거 | ✅ 완료 |
+| 무한 캔버스 | `Canvas.tsx` — 휠 줌(0.1~8x), 드래그 패닝, 더블클릭 초기화, 그리드 동기화 | ✅ 완료 |
+| iframe 렌더링 수정 | `DocumentFrame.tsx` — injectNoScroll 개선(body 배경/padding 정리) | ✅ 완료 |
 
 ## Verification Agent Instructions
 

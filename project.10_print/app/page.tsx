@@ -60,6 +60,33 @@ import { savesGet, savesSave, savesDelete } from '@/lib/saves'
 import { compressImage } from '@/lib/imageUtils'
 
 // =============================================================================
+// Helper — 다중 페이지 HTML 분리
+// =============================================================================
+
+/**
+ * AGENT-2-P2가 생성한 HTML에는 여러 `.page` div가 세로로 쌓여 있다.
+ * DocumentFrame은 단일 페이지 크기(A3 = 1122px)로 iframe을 고정하므로
+ * 전체 HTML을 그대로 넣으면 첫 페이지만 보이고 나머지는 overflow:hidden에 잘린다.
+ * 이 함수는 `.page` 단위로 HTML을 분리하여 각각을 완전한 독립 HTML 문서로 래핑한다.
+ */
+function splitHtmlPages(fullHtml: string): string[] {
+  // SSR 환경에서는 분리 불가 — 원본 반환 (handleGenerate는 클라이언트 전용)
+  if (typeof window === 'undefined') return [fullHtml]
+
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(fullHtml, 'text/html')
+  const pageEls = Array.from(doc.querySelectorAll('.page'))
+
+  // .page 요소가 없으면 원본 반환 (VIDEO 등 비표준 출력 대비)
+  if (pageEls.length === 0) return [fullHtml]
+
+  const headHtml = doc.head.outerHTML
+  return pageEls.map((page) =>
+    `<!DOCTYPE html><html lang="ko">${headHtml}<body>${page.outerHTML}</body></html>`
+  )
+}
+
+// =============================================================================
 // Helper — 에이전트 구조화 오류 전달용 클래스
 // =============================================================================
 
@@ -392,7 +419,7 @@ export default function PrintPage() {
   // 페이지별 HTML 추출 (PreviewStrip용)
   // =========================================================================
 
-  const pages: string[] = result?.html ? [result.html] : []
+  const pages: string[] = result?.html ? splitHtmlPages(result.html) : []
 
   // =========================================================================
   // 문서 렌더러 선택
@@ -402,7 +429,7 @@ export default function PrintPage() {
     if (!result) return null
 
     const commonProps = {
-      html: result.html ?? '',
+      html: (pages.length > 0 && pages[currentPage]) ? pages[currentPage] : (result.html ?? ''),
       slotMapping: result.slotMapping,
       masterData: result.masterData,
       pageIndex: currentPage,
@@ -428,7 +455,7 @@ export default function PrintPage() {
     <>
       {/* 1. 상단 헤더 */}
       <GlobalHeader
-        status={isGenerating ? 'generating' : error ? 'error' : 'idle'}
+        status={isGenerating ? 'generating' : (error || agentError) ? 'error' : 'idle'}
       />
 
       {/* 2. 좌측 플로팅 툴바 */}
