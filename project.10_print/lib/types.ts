@@ -147,10 +147,33 @@ export interface DocumentTemplateProps {
 /** VIDEO 모드 전용 템플릿 Props */
 export interface VideoTemplateProps {
   videoUri: string | null
+  isLoading: boolean
 }
 
 // ---------------------------------------------------------------------------
-// 8. 앱 전역 상태 인터페이스 (page.tsx 상태 설계 기준)
+// 8. 에이전트 오류 진단 타입
+// ---------------------------------------------------------------------------
+
+/** `/api/print` 실패 시 반환되는 구조화 오류 정보 */
+export interface AgentErrorInfo {
+  /** 사용자 표시용 통합 메시지 */
+  message: string
+  /** 실패한 에이전트 식별자 */
+  failedAgent: string
+  /** 오류 유형 */
+  errorType: string
+  /** 실패 직전까지 완료된 단계의 로그 */
+  partialLog: {
+    preStep?: string
+    step1?: string
+    step2?: string
+    step3?: string
+    step4?: string
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 9. 앱 전역 상태 인터페이스 (page.tsx 상태 설계 기준)
 // ---------------------------------------------------------------------------
 
 /**

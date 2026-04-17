@@ -58,6 +58,29 @@ interface DocumentFrameProps {
 // Component
 // ---------------------------------------------------------------------------
 
+/**
+ * iframe srcdoc에 뷰어 통합 CSS를 주입한다.
+ *
+ * 세 템플릿(REPORT/PANEL/DRAWING)은 브라우저 단독 뷰어(어두운 body 배경 + 페이지 부유)를
+ * 위해 설계되었으나, DocumentFrame은 iframe을 .page 물리 치수와 동일하게 sizing한다.
+ * 이 불일치를 해소하기 위해:
+ *   1. body 배경을 흰색으로 재정의 (어두운 배경이 상단 여백으로 노출되는 현상 제거)
+ *   2. body padding / .page margin을 0으로 제거 (.page가 iframe (0,0)에서 시작하도록)
+ *   3. .page box-shadow 제거 (iframe 내부에서 불필요한 장식)
+ *   4. overflow:hidden으로 스크롤 차단
+ */
+function injectNoScroll(raw: string): string {
+  const style = [
+    '<style>',
+    'html,body{overflow:hidden!important;padding:0!important;background:white!important;}',
+    '.page{margin:0!important;box-shadow:none!important;}',
+    '</style>',
+  ].join('')
+  if (raw.includes('</head>')) return raw.replace('</head>', `${style}</head>`)
+  if (raw.includes('<head>'))  return raw.replace('<head>',  `<head>${style}`)
+  return style + raw
+}
+
 export default function DocumentFrame({
   html,
   mode,
@@ -120,7 +143,7 @@ export default function DocumentFrame({
          *   scale 후 잘려나가는 영역이 오른쪽·아래쪽에만 발생.
          */}
         <iframe
-          srcDoc={html}
+          srcDoc={injectNoScroll(html)}
           title="document-preview"
           style={{
             width:           w,

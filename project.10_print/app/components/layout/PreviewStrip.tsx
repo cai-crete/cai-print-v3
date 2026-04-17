@@ -70,15 +70,21 @@ function PageThumbnail({
         }}
       >
         {html ? (
-          <div
-            className="pointer-events-none select-none"
+          /* iframe srcdoc: CSS 격리로 앱 스타일 오염 차단 */
+          <iframe
+            srcDoc={html}
+            sandbox="allow-scripts"
+            loading="lazy"
+            title={`page-thumb-${index}`}
             style={{
-              width: docW,
-              height: docH,
-              transform: `scale(${thumbScale})`,
+              width:           docW,
+              height:          docH,
+              border:          'none',
+              display:         'block',
+              transform:       `scale(${thumbScale})`,
               transformOrigin: 'top left',
+              pointerEvents:   'none',
             }}
-            dangerouslySetInnerHTML={{ __html: html }}
           />
         ) : (
           <div
@@ -176,6 +182,8 @@ export default function PreviewStrip({
     setIsEditingPage(false)
   }
 
+  if (totalPages === 0) return null
+
   return (
     <div
       data-preview-strip
@@ -193,80 +201,67 @@ export default function PreviewStrip({
         overflow: 'hidden',
       }}
     >
-      {/* 이전 페이지 그룹 버튼 */}
-      <button
-        onClick={scrollLeft}
-        disabled={totalPages === 0}
-        className="shrink-0 flex items-center justify-center transition-colors"
-        style={{
-          width: '1.75rem',
-          height: '1.75rem',
-          borderRadius: 'var(--radius-box)',
-          border: '1px solid var(--color-border)',
-          backgroundColor: 'transparent',
-          color: 'var(--color-text-caption)',
-          cursor: totalPages === 0 ? 'not-allowed' : 'pointer',
-          opacity: totalPages === 0 ? 0.3 : 1,
-        }}
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-      </button>
+      {/* 이전 페이지 그룹 버튼 (페이지가 있을 때만 표시) */}
+      {totalPages > 0 && (
+        <button
+          onClick={scrollLeft}
+          className="shrink-0 flex items-center justify-center transition-colors"
+          style={{
+            width: '1.75rem',
+            height: '1.75rem',
+            borderRadius: 'var(--radius-box)',
+            border: '1px solid var(--color-border)',
+            backgroundColor: 'transparent',
+            color: 'var(--color-text-caption)',
+            cursor: 'pointer',
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+      )}
 
       {/* 스크롤 가능한 썸네일 목록 */}
       <div
         ref={scrollRef}
-        className="flex-1 flex items-center gap-1 overflow-x-auto"
+        className="flex-1 flex items-center gap-1 overflow-x-auto h-full"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {totalPages === 0 ? (
-          /* 결과 없음 상태: 빈 슬롯 힌트 */
-          <div
-            className="flex items-center justify-center w-full h-full"
-            style={{ color: 'var(--color-border)' }}
-          >
-            <span className="text-xs">생성된 문서가 없습니다</span>
-          </div>
-        ) : (
-          <>
-            {pages.map((html, idx) => (
-              <PageThumbnail
-                key={idx}
-                index={idx}
-                isActive={idx === currentPage}
-                html={html}
-                docW={docW}
-                docH={docH}
-                onClick={() => onPageChange(idx)}
-              />
-            ))}
-            {/* 빈 추가 슬롯 */}
-            <AddPageSlot />
-          </>
-        )}
+        {totalPages > 0 && pages.map((html, idx) => (
+          <PageThumbnail
+            key={idx}
+            index={idx}
+            isActive={idx === currentPage}
+            html={html}
+            docW={docW}
+            docH={docH}
+            onClick={() => onPageChange(idx)}
+          />
+        ))}
+        {totalPages > 0 && <AddPageSlot />}
       </div>
 
-      {/* 다음 페이지 그룹 버튼 */}
-      <button
-        onClick={scrollRight}
-        disabled={totalPages === 0}
-        className="shrink-0 flex items-center justify-center transition-colors"
-        style={{
-          width: '1.75rem',
-          height: '1.75rem',
-          borderRadius: 'var(--radius-box)',
-          border: '1px solid var(--color-border)',
-          backgroundColor: 'transparent',
-          color: 'var(--color-text-caption)',
-          cursor: totalPages === 0 ? 'not-allowed' : 'pointer',
-          opacity: totalPages === 0 ? 0.3 : 1,
-        }}
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
-      </button>
+      {/* 다음 페이지 그룹 버튼 (페이지가 있을 때만 표시) */}
+      {totalPages > 0 && (
+        <button
+          onClick={scrollRight}
+          className="shrink-0 flex items-center justify-center transition-colors"
+          style={{
+            width: '1.75rem',
+            height: '1.75rem',
+            borderRadius: 'var(--radius-box)',
+            border: '1px solid var(--color-border)',
+            backgroundColor: 'transparent',
+            color: 'var(--color-text-caption)',
+            cursor: 'pointer',
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+      )}
 
       {/* 현재 페이지 / 총 페이지 표시 */}
       {totalPages > 0 && (

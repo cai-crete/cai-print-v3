@@ -23,13 +23,13 @@ const MIME: Record<string, string> = {
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
   const folder = searchParams.get('folder') ?? ''
-  const file   = searchParams.get('file')   ?? ''
+  const file   = searchParams.get('file')
 
-  if (!folder || !file) {
-    return new NextResponse('Bad Request', { status: 400 })
+  if (!file) {
+    return new NextResponse('Bad Request: Missing file parameter', { status: 400 })
   }
 
-  const resolved = path.resolve(LIBRARY_DIR, folder, file)
+  const resolved = folder ? path.resolve(LIBRARY_DIR, folder, file) : path.resolve(LIBRARY_DIR, file)
 
   // Path traversal 방지
   if (!resolved.startsWith(LIBRARY_DIR + path.sep) && resolved !== LIBRARY_DIR) {

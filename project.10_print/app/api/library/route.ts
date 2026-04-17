@@ -20,6 +20,7 @@ export async function GET() {
 
   const entries = fs.readdirSync(LIBRARY_DIR, { withFileTypes: true })
   const folderEntries = entries.filter((e) => e.isDirectory())
+  const fileEntries   = entries.filter((e) => !e.isDirectory() && IMAGE_EXTS.has(path.extname(e.name).toLowerCase()))
 
   const folders: LibraryFolder[] = folderEntries.map((dir) => {
     const folderPath = path.join(LIBRARY_DIR, dir.name)
@@ -47,5 +48,20 @@ export async function GET() {
     }
   })
 
-  return NextResponse.json(folders)
+  // 최상단 루트에 존재하는 낱장 이미지 풀
+  const rootImages: LibraryImage[] = fileEntries.map((fileObj, idx) => {
+    const file = fileObj.name
+    // folder= 없이 file= 만 전달 시 최상위 폴더 기준으로 접근하도록 구조 개선이 필요할 수도 있지만,
+    // 현재 이미지 처리 라우터가 "folder"를 필수로 요구하므로, folder 매개변수 처리를 위해 빈 문자열을 넘김
+    const imageUrl = `/api/library/image?file=${encodeURIComponent(file)}`
+    return {
+      id:           `ROOT__${idx}__${file}`,
+      name:         file,
+      url:          imageUrl,
+      category:     'A' as const,
+      thumbnailUrl: imageUrl,
+    }
+  })
+
+  return NextResponse.json({ folders, rootImages })
 }

@@ -42,6 +42,7 @@ import type {
   PrintMode,
   PanelOrientation,
   PrintResult,
+  AgentErrorInfo,
   HistoryEntry,
   LibraryFolder,
   LibraryImage,
@@ -54,6 +55,20 @@ import { exportDocument } from '@/lib/export'
 
 // -- Saves
 import { savesGet, savesSave, savesDelete } from '@/lib/saves'
+
+// -- Image utils
+import { compressImage } from '@/lib/imageUtils'
+
+// =============================================================================
+// Helper — 에이전트 구조화 오류 전달용 클래스
+// =============================================================================
+
+class AgentApiError extends Error {
+  constructor(public readonly info: AgentErrorInfo) {
+    super(info.message)
+    this.name = 'AgentApiError'
+  }
+}
 
 // =============================================================================
 // Helper — API 호출
@@ -85,6 +100,15 @@ async function callPrintApi(
   const data = await res.json()
 
   if (!res.ok) {
+    // 에이전트 구조화 오류 (failedAgent 포함) → AgentApiError로 전달
+    if (data.failedAgent) {
+      throw new AgentApiError({
+        message:     data.error ?? '에이전트 오류가 발생했습니다.',
+        failedAgent: data.failedAgent,
+        errorType:   data.errorType ?? 'API_ERROR',
+        partialLog:  data.partialLog ?? {},
+      })
+    }
     throw new Error(data.error || '서버 오류가 발생했습니다.')
   }
 
@@ -123,11 +147,13 @@ export default function PrintPage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isExporting, setIsExporting]   = useState(false)
   const [error, setError]               = useState<string | null>(null)
+  const [agentError, setAgentError]     = useState<AgentErrorInfo | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [isLibraryOpen, setIsLibraryOpen]       = useState(false)
   const [isSavesOpen, setIsSavesOpen]           = useState(false)
   const [libraryFolders, setLibraryFolders]     = useState<LibraryFolder[]>([])
   const [isLibraryLoading, setIsLibraryLoading] = useState(false)
+  const [libraryActionTarget, setLibraryActionTarget] = useState<'common' | 'videoStart' | 'videoEnd' | null>(null)
   const [savedDocuments, setSavedDocuments]     = useState<SavedDocument[]>([])
 
   // -------------------------------------------------------------------------
@@ -144,6 +170,7 @@ export default function PrintPage() {
     setMode(newMode)
     setResult(null)
     setError(null)
+    setAgentError(null)
     setCurrentPage(0)
   }, [])
 
@@ -167,6 +194,7 @@ export default function PrintPage() {
 
     setIsGenerating(true)
     setError(null)
+    setAgentError(null)
 
     try {
       const data = await callPrintApi(
@@ -187,7 +215,11 @@ export default function PrintPage() {
         setHistoryIndex((prev) => prev + 1)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
+      if (err instanceof AgentApiError) {
+        setAgentError(err.info)
+      } else {
+        setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
+      }
     } finally {
       setIsGenerating(false)
     }
@@ -229,6 +261,7 @@ export default function PrintPage() {
     setResult(null)
     setCurrentPage(0)
     setError(null)
+    setAgentError(null)
     setHistory([])
     setHistoryIndex(-1)
   }, [])
@@ -260,14 +293,21 @@ export default function PrintPage() {
   // 핸들러 — Library 열기 (지연 로딩)
   // =========================================================================
 
-  const handleOpenLibrary = useCallback(async () => {
+  const handleOpenLibrary = useCallback(async (target?: 'common' | 'videoStart' | 'videoEnd') => {
+    setLibraryActionTarget(target ?? null)
     setIsLibraryOpen(true)
     if (libraryFolders.length > 0 || isLibraryLoading) return
     setIsLibraryLoading(true)
     try {
       const res  = await fetch('/api/library')
       const data = await res.json()
-      setLibraryFolders(data as LibraryFolder[])
+      const virtualFolder = {
+        id: 'ROOT',
+        name: 'ALL IMAGES',
+        images: data.rootImages || [],
+        createdAt: new Date().toISOString()
+      }
+      setLibraryFolders([virtualFolder, ...(data.folders || [])])
     } catch {
       // 조용히 실패 — 빈 상태 표시
     } finally {
@@ -283,12 +323,20 @@ export default function PrintPage() {
     try {
       const res  = await fetch(img.url)
       const blob = await res.blob()
-      const file = new File([blob], img.name, { type: blob.type })
-      setImages((prev) => [...prev, file])
+      const raw  = new File([blob], img.name, { type: blob.type })
+      const file = await compressImage(raw)
+
+      if (!libraryActionTarget || libraryActionTarget === 'common') {
+        setImages((prev) => [...prev, file])
+      } else if (libraryActionTarget === 'videoStart') {
+        setVideoStartImage(file)
+      } else if (libraryActionTarget === 'videoEnd') {
+        setVideoEndImage(file)
+      }
     } catch {
       setError('라이브러리 이미지를 불러오는 데 실패했습니다.')
     }
-  }, [])
+  }, [libraryActionTarget])
 
   // =========================================================================
   // 핸들러 — Saves
@@ -327,8 +375,8 @@ export default function PrintPage() {
     setError(null)
   }, [])
 
-  const handleSavesDelete = useCallback((docId: string) => {
-    savesDelete(docId)
+  const handleSavesDelete = useCallback((docIds: string[]) => {
+    docIds.forEach((id) => savesDelete(id))
     setSavedDocuments(savesGet())
   }, [])
 
@@ -368,7 +416,7 @@ export default function PrintPage() {
       case 'DRAWING':
         return <DrawingTemplate {...commonProps} />
       case 'VIDEO':
-        return <VideoTemplate videoUri={result.videoUri ?? null} />
+        return <VideoTemplate videoUri={result.videoUri ?? null} isLoading={isGenerating} />
     }
   }
 
@@ -389,7 +437,7 @@ export default function PrintPage() {
         canRedo={canRedo}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        onOpenLibrary={handleOpenLibrary}
+        onOpenLibrary={() => handleOpenLibrary()}
         onOpenSaves={handleOpenSaves}
         onSave={handleSave}
         onNewProject={handleNewProject}
@@ -422,6 +470,7 @@ export default function PrintPage() {
           <div className="flex flex-col gap-8">
             {/* INSERT IMAGE */}
             <ImageInsert
+              label="INSERT IMAGE"
               mode={mode}
               images={images}
               onImagesChange={setImages}
@@ -429,10 +478,12 @@ export default function PrintPage() {
               videoEndImage={videoEndImage}
               onVideoStartChange={setVideoStartImage}
               onVideoEndChange={setVideoEndImage}
+              onLibraryRequest={handleOpenLibrary}
             />
 
             {/* PURPOSE */}
             <PurposeSelector
+              label="PURPOSE"
               mode={mode}
               orientation={orientation}
               onModeChange={handleModeChange}
@@ -441,6 +492,7 @@ export default function PrintPage() {
 
             {/* NUMBER OF PAGES */}
             <PageCountControl
+              label="NUMBER OF PAGES"
               mode={mode}
               value={pageCount}
               onChange={setPageCount}
@@ -448,13 +500,70 @@ export default function PrintPage() {
 
             {/* PROMPT */}
             <PromptInput
+              label="PROMPT"
               value={prompt}
               onChange={setPrompt}
             />
 
-            {/* 에러 메시지 */}
-            {error && (
+            {/* 에러 메시지 — 단순 오류 */}
+            {error && !agentError && (
               <p className="text-xs text-red-500 leading-relaxed">{error}</p>
+            )}
+
+            {/* 에러 메시지 — 에이전트 구조화 오류 */}
+            {agentError && (
+              <div
+                style={{
+                  border: '1px solid #f87171',
+                  borderRadius: '0.5rem',
+                  padding: '0.75rem',
+                  backgroundColor: '#fff1f2',
+                  fontSize: '0.75rem',
+                  lineHeight: '1.5',
+                  color: '#b91c1c',
+                }}
+              >
+                {/* 실패 단계 */}
+                <p style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
+                  ✕ {agentError.failedAgent} 단계 실패
+                </p>
+                {/* 오류 유형 */}
+                <p style={{ color: '#6b7280', marginBottom: '0.375rem' }}>
+                  유형: {agentError.errorType}
+                </p>
+                {/* 안내 메시지 */}
+                <p style={{ marginBottom: '0.5rem' }}>{agentError.message}</p>
+                {/* 완료된 단계 로그 (존재할 때만) */}
+                {Object.keys(agentError.partialLog).length > 0 && (
+                  <details style={{ marginTop: '0.25rem' }}>
+                    <summary style={{ cursor: 'pointer', color: '#9ca3af', userSelect: 'none' }}>
+                      완료된 단계 로그 보기
+                    </summary>
+                    <ul style={{ marginTop: '0.375rem', paddingLeft: '0.75rem', color: '#374151', listStyle: 'disc' }}>
+                      {agentError.partialLog.preStep && <li>분류: {agentError.partialLog.preStep}</li>}
+                      {agentError.partialLog.step1   && <li>OCR: {agentError.partialLog.step1}</li>}
+                      {agentError.partialLog.step2   && <li>마스터 데이터: {agentError.partialLog.step2}</li>}
+                      {agentError.partialLog.step3   && <li>레이아웃: {agentError.partialLog.step3}</li>}
+                      {agentError.partialLog.step4   && <li>글 작성: {agentError.partialLog.step4}</li>}
+                    </ul>
+                  </details>
+                )}
+                {/* 닫기 */}
+                <button
+                  onClick={() => setAgentError(null)}
+                  style={{
+                    marginTop: '0.5rem',
+                    fontSize: '0.7rem',
+                    color: '#9ca3af',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                >
+                  닫기
+                </button>
+              </div>
             )}
           </div>
         }
@@ -474,9 +583,31 @@ export default function PrintPage() {
       {/* 6. 모달 — Library */}
       <LibraryModal
         isOpen={isLibraryOpen}
-        onClose={() => setIsLibraryOpen(false)}
+        onClose={() => { setIsLibraryOpen(false); setLibraryActionTarget(null) }}
         folders={libraryFolders}
+        mode={libraryActionTarget ? 'select' : 'manage'}
+        maxSelect={mode === 'VIDEO' && libraryActionTarget ? 1 : undefined}
         onSelectImage={handleLibrarySelectImage}
+        onSelectImages={async (imgs) => {
+          const files = await Promise.all(imgs.map(async img => {
+            const res = await fetch(img.url)
+            const blob = await res.blob()
+            const raw = new File([blob], img.name, { type: blob.type })
+            return compressImage(raw)
+          }))
+          
+          if (libraryActionTarget === 'common') {
+            setImages(prev => [...prev, ...files])
+          } else if (libraryActionTarget === 'videoStart') {
+            setVideoStartImage(files[0] ?? null)
+          } else if (libraryActionTarget === 'videoEnd') {
+            setVideoEndImage(files[0] ?? null)
+          }
+          setLibraryActionTarget(null)
+          setIsLibraryOpen(false)
+        }}
+        // 이 아래는 manage 모드 전용 prop
+        onAddFolder={() => {}} // 만약 별도 동작이 없다면 비워둡니다 (이전 버전에서 handleLibraryAddFolder 등이 있었음)
       />
 
       {/* 7. 모달 — Saves */}
@@ -485,7 +616,7 @@ export default function PrintPage() {
         onClose={() => setIsSavesOpen(false)}
         documents={savedDocuments}
         onOpen={handleSavesOpen}
-        onDelete={handleSavesDelete}
+        onDeleteBatch={handleSavesDelete}
       />
     </>
   )

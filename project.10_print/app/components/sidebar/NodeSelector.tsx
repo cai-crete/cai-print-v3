@@ -28,7 +28,7 @@ export default function NodeSelector({ currentNode = 'PRINT' }: NodeSelectorProp
           height: 'var(--h-cta-lg)',
           border: 'none',
           borderRadius: 'var(--radius-box)',
-          padding: '0 0.625rem',
+          padding: '0 1.25rem',
           backgroundColor: 'transparent',
           cursor: 'default',
         }}

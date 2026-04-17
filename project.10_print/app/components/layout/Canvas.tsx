@@ -3,52 +3,60 @@
 /**
  * Canvas.tsx — 중앙 무한 캔버스 영역 (Canvas Layer: z-0)
  *
- * Stage 2 변경: artboard가 가용 공간 전체를 채우도록 수정.
- * DocumentFrame이 artboard 크기를 ResizeObserver로 측정하여
- * 모드별 물리 치수에 맞는 scale을 자체 계산한다.
+ * 무한 캔버스 기능:
+ *   - 마우스 휠      : 커서 위치 기준 줌인/줌아웃 (0.1 ≤ zoom ≤ 8)
+ *   - 좌버튼 드래그  : 캔버스 패닝
+ *   - 더블클릭       : 뷰 초기화 (zoom=1, pan=0)
+ *   - 배경 그리드    : zoom/pan에 동기화
+ *
+ * 설계:
+ *   DocumentFrame의 ResizeObserver는 CSS transform 이전 레이아웃 크기를 측정하므로
+ *   항상 캔버스 크기에 맞게 문서를 스케일한다.
+ *   Canvas zoom/pan 은 그 위에 순수 시각적 변환으로 적용된다.
  *
  * COPYRIGHTS 2026. CRE-TE CO.,LTD. ALL RIGHTS RESERVED.
  */
 
-import React from 'react'
+import React, { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 
-interface CanvasProps {
-  mode?: string
-  children?: React.ReactNode
-  isEmpty: boolean
-  isLoading: boolean
+// ---------------------------------------------------------------------------
+// 뷰 상태 (zoom + pan)
+// ---------------------------------------------------------------------------
+
+interface ViewState {
+  zoom: number
+  panX: number
+  panY: number
 }
 
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 select-none">
-      <div
-        className="flex items-center justify-center rounded-full"
-        style={{
-          width: '4rem',
-          height: '4rem',
-          backgroundColor: 'var(--color-placeholder)',
-          color: 'var(--color-border)',
-        }}
-      >
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <line x1="9" y1="13" x2="15" y2="13" />
-          <line x1="9" y1="17" x2="12" y2="17" />
-        </svg>
-      </div>
-      <p className="text-base font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
-        생성된 문서가 없습니다.
-      </p>
-      <p className="text-sm text-center leading-relaxed" style={{ color: 'var(--color-text-caption)' }}>
-        우측 패널에서 설정을 마치고
-        <br />
-        GENERATE 버튼을 눌러주세요.
-      </p>
-    </div>
-  )
+const INITIAL_VIEW: ViewState = { zoom: 1, panX: 0, panY: 0 }
+
+type ViewAction =
+  | { type: 'PAN_TO'; x: number; y: number }
+  | { type: 'ZOOM_TO'; zoom: number; cursorX: number; cursorY: number }
+  | { type: 'RESET' }
+
+function viewReducer(state: ViewState, action: ViewAction): ViewState {
+  switch (action.type) {
+    case 'PAN_TO':
+      return { ...state, panX: action.x, panY: action.y }
+    case 'ZOOM_TO': {
+      const newZoom = Math.max(0.1, Math.min(8, action.zoom))
+      const ratio   = newZoom / state.zoom
+      return {
+        zoom: newZoom,
+        panX: action.cursorX - ratio * (action.cursorX - state.panX),
+        panY: action.cursorY - ratio * (action.cursorY - state.panY),
+      }
+    }
+    case 'RESET':
+      return INITIAL_VIEW
+  }
 }
+
+// ---------------------------------------------------------------------------
+// 로딩 상태 UI
+// ---------------------------------------------------------------------------
 
 function LoadingState() {
   return (
@@ -69,14 +77,91 @@ function LoadingState() {
   )
 }
 
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
+
+interface CanvasProps {
+  mode?: string
+  children?: React.ReactNode
+  isEmpty: boolean
+  isLoading: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export default function Canvas({ children, isEmpty, isLoading }: CanvasProps) {
+  const viewportRef                = useRef<HTMLDivElement>(null)
+  const [view, dispatch]           = useReducer(viewReducer, INITIAL_VIEW)
+  const [isDragging, setIsDragging] = useState(false)
+  const dragRef = useRef<{ sx: number; sy: number; px: number; py: number } | null>(null)
+  const viewRef = useRef(view)
+  viewRef.current = view
+
+  // -------------------------------------------------------------------------
+  // 휠 줌 — 마운트 시 1회 등록 (viewRef로 최신 zoom 참조)
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    const el = viewportRef.current
+    if (!el) return
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const rect    = el.getBoundingClientRect()
+      const cursorX = e.clientX - rect.left
+      const cursorY = e.clientY - rect.top
+      const factor  = e.deltaY < 0 ? 1.1 : 0.9
+      dispatch({
+        type:    'ZOOM_TO',
+        zoom:    viewRef.current.zoom * factor,
+        cursorX,
+        cursorY,
+      })
+    }
+
+    el.addEventListener('wheel', handleWheel, { passive: false })
+    return () => el.removeEventListener('wheel', handleWheel)
+  }, [])
+
+  // -------------------------------------------------------------------------
+  // 드래그 패닝
+  // -------------------------------------------------------------------------
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return
+    dragRef.current = { sx: e.clientX, sy: e.clientY, px: view.panX, py: view.panY }
+    setIsDragging(true)
+  }, [view.panX, view.panY])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const d = dragRef.current
+    if (!d) return
+    dispatch({ type: 'PAN_TO', x: d.px + (e.clientX - d.sx), y: d.py + (e.clientY - d.sy) })
+  }, [])
+
+  const endDrag = useCallback(() => {
+    dragRef.current = null
+    setIsDragging(false)
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('mouseup', endDrag)
+    return () => window.removeEventListener('mouseup', endDrag)
+  }, [endDrag])
+
+  const handleDoubleClick = useCallback(() => dispatch({ type: 'RESET' }), [])
+
+  const gridSize = 24
+
   return (
     <main
+      ref={viewportRef}
       className="fixed overflow-hidden"
       style={{
         top:    'var(--header-h)',
-        right:  'var(--sidebar-spacing)',
-        bottom: 'calc(var(--preview-h) + var(--gap-global))',
+        right:  0,
+        bottom: 0,
         left:   0,
         zIndex: 'var(--z-canvas)',
         backgroundColor: 'var(--color-app-bg)',
@@ -84,42 +169,50 @@ export default function Canvas({ children, isEmpty, isLoading }: CanvasProps) {
           linear-gradient(to right, rgba(0,0,0,0.04) 1px, transparent 1px),
           linear-gradient(to bottom, rgba(0,0,0,0.04) 1px, transparent 1px)
         `,
-        backgroundSize: '24px 24px',
+        backgroundSize:     `${gridSize * view.zoom}px ${gridSize * view.zoom}px`,
+        backgroundPosition: `${view.panX}px ${view.panY}px`,
+        cursor:     isDragging ? 'grabbing' : 'grab',
+        userSelect: 'none',
       }}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onDoubleClick={handleDoubleClick}
     >
-      {/* 내부 여백 — absolute inset-0 으로 캔버스 전체 채움 */}
-      <div
-        className="absolute inset-0"
-        style={{ padding: 'var(--gap-global)' }}
-      >
-        {isLoading ? (
-          /* 로딩 상태: 전체 영역 중앙 정렬 */
-          <div className="w-full h-full flex items-center justify-center">
-            <LoadingState />
-          </div>
-        ) : isEmpty ? (
-          /* 빈 상태: 전체 영역 중앙 정렬 */
-          <div className="w-full h-full flex items-center justify-center">
-            <EmptyState />
-          </div>
-        ) : (
-          /* 문서 표시: artboard가 가용 공간 전체를 차지하고 DocumentFrame이 내부에서 스케일 계산 */
+      {isLoading ? (
+        <div className="absolute inset-0 flex items-center justify-center" style={{ pointerEvents: 'none' }}>
+          <LoadingState />
+        </div>
+      ) : isEmpty ? null : (
+        <>
           <div
-            className="relative w-full h-full"
+            className="absolute inset-0"
+            style={{ 
+              paddingTop: 'var(--gap-global)', 
+              paddingBottom: 'var(--gap-global)', 
+              paddingLeft: 'var(--gap-global)', 
+              paddingRight: 'var(--sidebar-spacing)' 
+            }}
           >
-            {/* 비인쇄용 가이드라인 */}
             <div
-              data-canvas-guide
-              className="absolute inset-0 pointer-events-none"
               style={{
-                border:       '1px dashed var(--color-guide)',
-                borderRadius: 'var(--radius-box)',
+                width:           '100%',
+                height:          '100%',
+                transformOrigin: '0 0',
+                transform:       `translate(${view.panX}px, ${view.panY}px) scale(${view.zoom})`,
               }}
-            />
-            {children}
+            >
+              {children}
+            </div>
           </div>
-        )}
-      </div>
+
+          {isDragging && (
+            <div
+              className="absolute inset-0"
+              style={{ zIndex: 1, cursor: 'grabbing' }}
+            />
+          )}
+        </>
+      )}
     </main>
   )
 }

@@ -91,8 +91,8 @@ function CircleButton({
       title={title}
       className="flex items-center justify-center transition-all"
       style={{
-        width: '2.75rem',
-        height: '2.75rem',
+        width: '3.75rem',
+        height: '3.75rem',
         borderRadius: '50%',
         backgroundColor: isSave
           ? 'var(--color-doc-bg)'

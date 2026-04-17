@@ -11,6 +11,7 @@
 import React from 'react'
 
 interface PromptInputProps {
+  label: string
   value: string
   onChange: (value: string) => void
   /** 입력 최대 글자 수. 기본 2000 (ARCHITECTURE.md 보안 기준) */
@@ -19,6 +20,7 @@ interface PromptInputProps {
 }
 
 export default function PromptInput({
+  label,
   value,
   onChange,
   maxLength = 2000,
@@ -30,7 +32,7 @@ export default function PromptInput({
     <div>
       {/* 섹션 헤더 */}
       <span className="block mb-4 text-ui-subtitle tracking-widest text-[--color-gray-400]">
-        PROMPT
+        {label}
       </span>
 
       {/* 텍스트 입력 */}

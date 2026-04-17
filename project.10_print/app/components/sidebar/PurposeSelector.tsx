@@ -15,6 +15,7 @@ import React from 'react'
 import type { PrintMode, PanelOrientation } from '@/lib/types'
 
 interface PurposeSelectorProps {
+  label: string
   mode: PrintMode
   orientation: PanelOrientation
   onModeChange: (mode: PrintMode) => void
@@ -32,6 +33,7 @@ const MODE_LABELS: Record<PrintMode, string> = {
 const MODES: PrintMode[] = ['REPORT', 'DRAWING', 'PANEL', 'VIDEO']
 
 export default function PurposeSelector({
+  label,
   mode,
   orientation,
   onModeChange,
@@ -41,7 +43,7 @@ export default function PurposeSelector({
     <div>
       {/* 섹션 헤더 */}
       <span className="block mb-4 text-ui-subtitle tracking-widest text-[--color-gray-400]">
-        PURPOSE
+        {label}
       </span>
 
       {/* 모드 선택 버튼 목록 */}
@@ -49,41 +51,10 @@ export default function PurposeSelector({
         {MODES.map((m) => {
           const isActive = mode === m
           return (
-            <button
-              key={m}
-              onClick={() => onModeChange(m)}
-              className="w-full text-ui-title transition-all flex items-center justify-center pt-0.5"
-              style={{
-                height: 'var(--h-cta-lg)',
-                borderRadius: 'var(--radius-box)',
-                border: isActive
-                  ? '1.5px solid var(--color-black)'
-                  : '1.5px solid var(--color-gray-200)',
-                backgroundColor: isActive
-                  ? 'var(--color-gray-100)'
-                  : 'var(--color-white)',
-                color: 'var(--color-black)',
-                cursor: 'pointer',
-              }}
-            >
-              {MODE_LABELS[m]}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* PANEL 선택 시: LANDSCAPE / PORTRAIT 서브 토글 */}
-      {mode === 'PANEL' && (
-        <div
-          className="flex gap-2 mt-4"
-        >
-          {(['LANDSCAPE', 'PORTRAIT'] as PanelOrientation[]).map((o) => {
-            const isActive = orientation === o
-            return (
+            <React.Fragment key={m}>
               <button
-                key={o}
-                onClick={() => onOrientationChange(o)}
-                className="flex-1 text-ui-title transition-all flex items-center justify-center pt-0.5"
+                onClick={() => onModeChange(m)}
+                className="w-full text-ui-title transition-all flex items-center justify-center pt-0.5"
                 style={{
                   height: 'var(--h-cta-lg)',
                   borderRadius: 'var(--radius-box)',
@@ -97,19 +68,49 @@ export default function PurposeSelector({
                   cursor: 'pointer',
                 }}
               >
-                {o}
+                {MODE_LABELS[m]}
               </button>
-            )
-          })}
-        </div>
-      )}
 
-      {/* VIDEO 선택 시: 스펙 안내 문구 */}
-      {mode === 'VIDEO' && (
-        <p className="mt-1 text-ui-caption text-[--color-gray-400]">
-          16:9 | 720p | 8s
-        </p>
-      )}
+              {/* PANEL 선택 시: LANDSCAPE / PORTRAIT 서브 토글 */}
+              {m === 'PANEL' && isActive && (
+                <div className="flex gap-2 w-full mt-1 mb-1">
+                  {(['LANDSCAPE', 'PORTRAIT'] as PanelOrientation[]).map((o) => {
+                    const isSubActive = orientation === o
+                    return (
+                      <button
+                        key={o}
+                        onClick={() => onOrientationChange(o)}
+                        className="flex-1 text-ui-title transition-all flex items-center justify-center pt-0.5"
+                        style={{
+                          height: 'var(--h-cta-lg)',
+                          borderRadius: 'var(--radius-box)',
+                          border: isSubActive
+                            ? '1.5px solid var(--color-black)'
+                            : '1.5px solid var(--color-gray-200)',
+                          backgroundColor: isSubActive
+                            ? 'var(--color-gray-100)'
+                            : 'var(--color-white)',
+                          color: 'var(--color-black)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {o}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* VIDEO 선택 시: 스펙 안내 문구 */}
+              {m === 'VIDEO' && isActive && (
+                <p className="mt-1 text-center text-ui-caption" style={{ color: 'var(--color-text-caption)' }}>
+                  16:9 | 720p | 8s
+                </p>
+              )}
+            </React.Fragment>
+          )
+        })}
+      </div>
     </div>
   )
 }

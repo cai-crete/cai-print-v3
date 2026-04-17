@@ -47,7 +47,7 @@ export default function Sidebar({
           zIndex: 'var(--z-control)',
           /* 태블릿 이하: 접힘/펼침 전환 */
           transition: 'transform 0.25s ease, opacity 0.25s ease',
-          transform: isOpen ? 'translateX(0)' : 'translateX(calc(100% + var(--gap-global)))',
+          transform: isOpen ? 'none' : 'translateX(calc(100% + var(--gap-global)))',
           opacity: isOpen ? 1 : 0,
           pointerEvents: isOpen ? 'auto' : 'none',
           gap: 'var(--gap-global)', /* 외부 요소와 본체 간 간격 */
@@ -99,7 +99,8 @@ export default function Sidebar({
             backgroundColor: 'var(--color-white)',
             borderRadius: 'var(--radius-box)',
             boxShadow: 'var(--shadow-float)',
-            overflow: 'hidden',
+            /* overflow: hidden 제거: 드롭다운 메뉴가 사이드바 영역 밖으로 보일 수 있도록 함 */
+            overflow: 'visible',
           }}
         >
           {/* -- 스크롤 영역 ------------------------------------------------- */}

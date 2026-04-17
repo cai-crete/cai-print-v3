@@ -14,6 +14,7 @@ import React from 'react'
 import type { PrintMode } from '@/lib/types'
 
 interface PageCountControlProps {
+  label: string
   mode: PrintMode
   value: number
   onChange: (value: number) => void
@@ -22,6 +23,7 @@ interface PageCountControlProps {
 }
 
 export default function PageCountControl({
+  label,
   mode,
   value,
   onChange,
@@ -46,7 +48,7 @@ export default function PageCountControl({
     <div>
       {/* 섹션 헤더 */}
       <span className="block mb-4 text-ui-subtitle tracking-widest text-[--color-gray-400]">
-        NUMBER OF PAGES
+        {label}
       </span>
 
       <div
