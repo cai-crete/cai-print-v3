@@ -449,18 +449,26 @@ export default function PrintPage() {
   }, [])
 
   const handleSave = useCallback(() => {
-    if (!result) return
+    if (!result) {
+      window.alert('저장할 결과가 없습니다. 먼저 GENERATE를 통해 문서를 생성하세요.')
+      return
+    }
     const doc: SavedDocument = {
       id:        `${Date.now()}`,
-      title:     `${mode} 문서`,
+      title:     `${mode} 문서_${new Date().toLocaleTimeString('ko-KR')}`,
       mode,
       pageCount,
       result,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
-    savesSave(doc)
-    setSavedDocuments(savesGet())
+    const success = savesSave(doc)
+    if (success) {
+      setSavedDocuments(savesGet())
+      window.alert('현재 문서가 SAVES에 성공적으로 저장되었습니다.')
+    } else {
+      window.alert('문서 저장에 실패했습니다. (브라우저 저장 공간 초과 등)')
+    }
   }, [result, mode, pageCount])
 
   const handleOpenSaves = useCallback(() => {

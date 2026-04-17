@@ -45,6 +45,7 @@ export default function LibraryModal({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const fileInputRef = useRef<HTMLInputElement>(null)
   const addMenuButtonRef = useRef<HTMLButtonElement>(null)
+  const addMenuRef = useRef<HTMLDivElement>(null)
 
   // 모달 닫힐 때 상태 초기화
   useEffect(() => {
@@ -59,8 +60,13 @@ export default function LibraryModal({
   // 외부 클릭 시 메뉴 닫기
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (showAddMenu && addMenuButtonRef.current && !addMenuButtonRef.current.contains(e.target as Node)) {
-        setShowAddMenu(false)
+      if (showAddMenu) {
+        const isClickInsideButton = addMenuButtonRef.current?.contains(e.target as Node)
+        const isClickInsideMenu = addMenuRef.current?.contains(e.target as Node)
+        
+        if (!isClickInsideButton && !isClickInsideMenu) {
+          setShowAddMenu(false)
+        }
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -242,7 +248,10 @@ export default function LibraryModal({
 
                 {/* 추가 메뉴 (팝오버) */}
                 {showAddMenu && (
-                  <div className="absolute top-10 right-0 z-[1001] flex flex-col bg-white shadow-[0_4px_12px_rgba(0,0,0,0.15)] rounded-lg border border-gray-100 overflow-hidden w-40 whitespace-nowrap">
+                  <div 
+                    ref={addMenuRef}
+                    className="absolute top-10 right-0 z-[1001] flex flex-col bg-white shadow-[0_4px_12px_rgba(0,0,0,0.15)] rounded-lg border border-gray-100 overflow-hidden w-40 whitespace-nowrap"
+                  >
                     <button 
                       className="text-left px-4 py-3 text-xs tracking-wider font-semibold text-gray-700 hover:bg-gray-50 hover:text-black transition-colors" 
                       onClick={() => { setShowAddMenu(false); fileInputRef.current?.click() }}

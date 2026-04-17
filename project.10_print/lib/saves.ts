@@ -22,7 +22,7 @@ export function savesGet(): SavedDocument[] {
 }
 
 /** 문서 저장 — 동일 id 존재 시 덮어쓰기, 없으면 앞에 추가 */
-export function savesSave(doc: SavedDocument): void {
+export function savesSave(doc: SavedDocument): boolean {
   const docs = savesGet()
   const idx  = docs.findIndex((d) => d.id === doc.id)
   if (idx >= 0) {
@@ -32,8 +32,10 @@ export function savesSave(doc: SavedDocument): void {
   }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(docs))
-  } catch {
-    // localStorage 용량 초과 등 무시
+    return true
+  } catch (e) {
+    console.error('localStorage Error:', e)
+    return false
   }
 }
 
