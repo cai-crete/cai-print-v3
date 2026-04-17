@@ -6,7 +6,7 @@
 - **작업 유형**: UI/UX 개선 및 버그 수정
 - **대상 노드**: N10 Print
 - **시작일**: 2026-04-17
-- **파일 경로**: `docs/exec-plans/active/exec-plan-n10-print-ui_bug_fix-2026.04.17.md`
+- **파일 경로**: `docs/exec-plans/completed/exec-plan-n10-print-ui_bug_fix-2026.04.17.md`
 
 ---
 
