@@ -84,16 +84,6 @@ export default function SavesModal({
             <span className="text-ui-title text-gray-800 tracking-wide mt-1">SAVES</span>
 
             <div className="flex items-center gap-3">
-              {/* Add Button */}
-              {!isDeleteMode && (
-                <button
-                  onClick={handleAddClick}
-                  className="flex items-center justify-center w-8 h-8 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50"
-                  title="새로운 문서 추가"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                </button>
-              )}
 
               {/* Delete Mode Toggle / Finalize */}
               {!isDeleteMode ? (

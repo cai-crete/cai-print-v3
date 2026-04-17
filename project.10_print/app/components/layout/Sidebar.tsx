@@ -99,8 +99,8 @@ export default function Sidebar({
             backgroundColor: 'var(--color-white)',
             borderRadius: 'var(--radius-box)',
             boxShadow: 'var(--shadow-float)',
-            /* overflow: hidden 제거: 드롭다운 메뉴가 사이드바 영역 밖으로 보일 수 있도록 함 */
-            overflow: 'visible',
+            /* overflow: hidden 복구: 사이드바 내부 스크롤 활성화를 위해 영역 격리 */
+            overflow: 'hidden',
           }}
         >
           {/* -- 스크롤 영역 ------------------------------------------------- */}

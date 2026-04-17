@@ -372,22 +372,24 @@ export default function ImageInsert({
           />
           <button
             onClick={handleSwap}
-            className="flex items-center justify-center mb-5 shrink-0 transition-transform hover:scale-110 active:scale-95"
+            className="flex items-center justify-center mb-5 shrink-0 transition-all hover:bg-gray-50 active:scale-95 shadow-sm"
             style={{
               width: '36px',
               height: '36px',
               borderRadius: '50%',
-              backgroundColor: 'var(--color-black)',
-              color: 'var(--color-white)',
-              border: 'none',
+              backgroundColor: 'var(--color-white)',
+              color: 'var(--color-black)',
+              border: '1px solid var(--color-gray-200)',
               cursor: 'pointer',
             }}
             title="이미지 위치 전환"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-              <polyline points="12 19 5 12 12 5" style={{ transform: 'matrix(-1, 0, 0, -1, 24, 24)' }} />
+            {/* 수평 교차 화살표 아이콘 */}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 3l4 4-4 4" />
+              <path d="M20 7H4" />
+              <path d="M8 21l-4-4 4-4" />
+              <path d="M4 17h16" />
             </svg>
           </button>
           <VideoSlot

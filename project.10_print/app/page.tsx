@@ -199,6 +199,13 @@ export default function PrintPage() {
     setError(null)
     setAgentError(null)
     setCurrentPage(0)
+
+    // 모드별 기본 장수 설정 (REPORT: 6, PANEL/DRAWING: 1)
+    if (newMode === 'REPORT') {
+      setPageCount(6)
+    } else {
+      setPageCount(1)
+    }
   }, [])
 
   // =========================================================================
@@ -284,7 +291,7 @@ export default function PrintPage() {
     setVideoStartImage(null)
     setVideoEndImage(null)
     setPrompt('')
-    setPageCount(6)
+    setPageCount(6) // default mode is REPORT
     setResult(null)
     setCurrentPage(0)
     setError(null)
@@ -328,7 +335,7 @@ export default function PrintPage() {
     try {
       const res  = await fetch('/api/library')
       const data = await res.json()
-      const virtualFolder = {
+      const virtualFolder: LibraryFolder = {
         id: 'ROOT',
         name: 'ALL IMAGES',
         images: data.rootImages || [],
@@ -341,6 +348,73 @@ export default function PrintPage() {
       setIsLibraryLoading(false)
     }
   }, [libraryFolders.length, isLibraryLoading])
+
+  // =========================================================================
+  // 핸들러 — Library 폴더 추가
+  // =========================================================================
+
+  const handleLibraryAddFolder = useCallback(() => {
+    const name = window.prompt('새 폴더 이름을 입력하세요.')
+    if (!name) return
+    const newFolder: LibraryFolder = {
+      id: `FOLDER_${Date.now()}`,
+      name,
+      images: [],
+      createdAt: new Date().toISOString()
+    }
+    setLibraryFolders(prev => [...prev, newFolder])
+  }, [])
+
+  // =========================================================================
+  // 핸들러 — Library 폴더 내 이미지 복사 (ADD)
+  // =========================================================================
+
+  const handleLibraryCopyImages = useCallback((targetFolderId: string, imagesToCopy: LibraryImage[]) => {
+    setLibraryFolders(prev => prev.map(f => {
+      if (f.id === targetFolderId) {
+        const existingIds = new Set(f.images.map(img => img.id))
+        const newImages = imagesToCopy.filter(img => !existingIds.has(img.id))
+        return {
+          ...f,
+          images: [...f.images, ...newImages]
+        }
+      }
+      return f
+    }))
+  }, [])
+
+  const handleLibraryAddFileToFolder = useCallback((folderId: string, file: File) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const url = e.target?.result as string
+      const newImage: LibraryImage = {
+        id: `IMG_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        url,
+        name: file.name,
+        category: 'A' // Default category
+      }
+      setLibraryFolders(prev => prev.map(f => {
+        if (f.id === folderId) {
+          return { ...f, images: [newImage, ...f.images] }
+        }
+        return f
+      }))
+    }
+    reader.readAsDataURL(file)
+  }, [])
+
+  const handleLibraryDeleteFolders = useCallback((folderIds: string[]) => {
+    setLibraryFolders(prev => prev.filter(f => !folderIds.includes(f.id)))
+  }, [])
+
+  const handleLibraryDeleteImages = useCallback((folderId: string, imageIds: string[]) => {
+    setLibraryFolders(prev => prev.map(f => {
+      if (f.id === folderId) {
+        return { ...f, images: f.images.filter(img => !imageIds.includes(img.id)) }
+      }
+      return f
+    }))
+  }, [])
 
   // =========================================================================
   // 핸들러 — Library 이미지 선택
@@ -634,7 +708,11 @@ export default function PrintPage() {
           setIsLibraryOpen(false)
         }}
         // 이 아래는 manage 모드 전용 prop
-        onAddFolder={() => {}} // 만약 별도 동작이 없다면 비워둡니다 (이전 버전에서 handleLibraryAddFolder 등이 있었음)
+        onAddFolder={handleLibraryAddFolder}
+        onDeleteFolders={handleLibraryDeleteFolders}
+        onDeleteImages={handleLibraryDeleteImages}
+        onAddFileToFolder={handleLibraryAddFileToFolder}
+        onAddImagesToFolder={handleLibraryCopyImages}
       />
 
       {/* 7. 모달 — Saves */}
