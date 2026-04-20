@@ -3,20 +3,23 @@ import sharp from 'sharp'
 
 /**
  * app/api/convert/route.ts — Convertio API 연동 엔드포인트
- * 
+ *
  * 역할:
  *  1. 클라이언트로부터 전송된 도면 캡처 데이터(Base64) 수신
  *  2. Convertio API를 호출하여 DXF 변환 작업 생성
- *  3. 완료될 때까지 상태 폴링 (최대 60초)
+ *  3. 완료될 때까지 상태 폴링 (최대 40초)
  *  4. 변환된 DXF 파일을 클라이언트로 스트림 전달
- * 
+ *
  * COPYRIGHTS 2026. CRE-TE CO.,LTD. ALL RIGHTS RESERVED.
  */
+
+// Vercel Hobby 플랜 최대 실행 시간 (초)
+export const maxDuration = 60
 
 const API_KEY = process.env.CONVERTIO_API_KEY
 const CONVERTIO_URL = 'https://api.convertio.co/convert'
 const STATUS_CHECK_INTERVAL_MS = 2000
-const MAX_POLLING_ATTEMPTS = 30 // 60초 (30 * 2s)
+const MAX_POLLING_ATTEMPTS = 20 // 40초 (20 * 2s) — sharp + API 오버헤드 버퍼 확보
 
 export async function POST(req: NextRequest) {
   if (!API_KEY) {

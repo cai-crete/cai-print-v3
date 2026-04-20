@@ -67,8 +67,7 @@ export async function exportDocument(
       const canvas = await captureCanvas(iframeBody, docW, docH, 1)
       await exportPdf(canvas, docW, docH, filename)
     } else if (format === 'dxf') {
-      // DXF는 텍스트 가독성과 선 정밀도를 위해 서버급 고도화 처리(scale: 4) 적용
-      const canvas = await captureCanvas(iframeBody, docW, docH, 3)
+      const canvas = await captureCanvas(iframeBody, docW, docH, 1)
       await exportDxf(canvas, filename)
     } else {
       const canvas = await captureCanvas(iframeBody, docW, docH, 1)
@@ -196,8 +195,9 @@ function triggerDownload(url: string, filename: string): void {
  * 캡처된 고해상도 이미지를 서버로 전송하여 DXF로 변환 및 다운로드 (전처리는 서버에서 수행)
  */
 async function exportDxf(canvas: HTMLCanvasElement, filename: string): Promise<void> {
-  const base64 = canvas.toDataURL('image/png')
-  
+  // JPEG 사용으로 페이로드 크기를 PNG 대비 ~80% 감소 (Vercel 4.5MB 한도 대응)
+  const base64 = canvas.toDataURL('image/jpeg', 0.8)
+
   const res = await fetch('/api/convert', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -209,8 +209,11 @@ async function exportDxf(canvas: HTMLCanvasElement, filename: string): Promise<v
   })
 
   if (!res.ok) {
-    const error = await res.json()
-    throw new Error(error.error || 'DXF 변환 서버 오류')
+    const contentType = res.headers.get('content-type') ?? ''
+    const errorMsg = contentType.includes('application/json')
+      ? (await res.json()).error
+      : `서버 오류 (${res.status})`
+    throw new Error(errorMsg || 'DXF 변환 서버 오류')
   }
 
   const blob = await res.blob()
