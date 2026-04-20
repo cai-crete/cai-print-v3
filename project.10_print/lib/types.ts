@@ -19,7 +19,7 @@ export type PrintMode = 'REPORT' | 'PANEL' | 'DRAWING' | 'VIDEO'
 export type PanelOrientation = 'LANDSCAPE' | 'PORTRAIT'
 
 /** EXPORT 지원 포맷 */
-export type ExportFormat = 'jpg' | 'png' | 'pdf' | 'mp4'
+export type ExportFormat = 'jpg' | 'png' | 'pdf' | 'mp4' | 'dxf'
 
 // ---------------------------------------------------------------------------
 // 2. API 요청 / 응답 타입
@@ -173,7 +173,30 @@ export interface AgentErrorInfo {
 }
 
 // ---------------------------------------------------------------------------
-// 9. 앱 전역 상태 인터페이스 (page.tsx 상태 설계 기준)
+// 9. 문서 물리 치수 상수 (CSS px @ 96 dpi)
+// ---------------------------------------------------------------------------
+
+const MM = 3.7795275591 // 1 mm → CSS px (96 dpi 기준)
+
+/** 모드별 문서 물리 치수 (CSS px) */
+export const DOC_SIZE: Record<string, { w: number; h: number }> = {
+  REPORT:          { w: Math.round(420 * MM),  h: Math.round(297 * MM) },   // 1587 × 1122
+  DRAWING:         { w: Math.round(420 * MM),  h: Math.round(297 * MM) },   // 1587 × 1122
+  PANEL_LANDSCAPE: { w: Math.round(1189 * MM), h: Math.round(841 * MM) },   // 4494 × 3179
+  PANEL_PORTRAIT:  { w: Math.round(841 * MM),  h: Math.round(1189 * MM) },  // 3179 × 4494
+  VIDEO:           { w: 1280, h: 720 },
+}
+
+/** DOC_SIZE 키 결정 헬퍼 */
+export function docSizeKey(mode: PrintMode, orientation?: PanelOrientation): string {
+  if (mode === 'PANEL') {
+    return orientation === 'PORTRAIT' ? 'PANEL_PORTRAIT' : 'PANEL_LANDSCAPE'
+  }
+  return mode
+}
+
+// ---------------------------------------------------------------------------
+// 10. 앱 전역 상태 인터페이스 (page.tsx 상태 설계 기준)
 // ---------------------------------------------------------------------------
 
 /**

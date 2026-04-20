@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * lib/saves.ts — 임시저장 문서 localStorage CRUD
  *

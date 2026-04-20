@@ -1,6 +1,6 @@
 # 비즈니스 컨텍스트 (Business Context)
 
-본 문서는 **CAI CANVAS | PRINT ver.2** 서비스의 비즈니스적 배경, 시장 포지셔닝 및 핵심 가치를 정의합니다.
+본 문서는 **CAI CANVAS | PRINT ver.3** 서비스의 비즈니스적 배경, 시장 포지셔닝 및 핵심 가치를 정의합니다.
 
 ---
 

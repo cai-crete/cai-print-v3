@@ -1,6 +1,6 @@
 # 브랜드 가이드라인 (Brand Guidelines)
 
-본 문서는 **CAI CANVAS | PRINT ver.2** 서비스의 브랜드 정체성과 시각적 원칙, 그리고 이를 유지하기 위한 가이드라인을 정의합니다.
+본 문서는 **CAI CANVAS | PRINT ver.3** 서비스의 브랜드 정체성과 시각적 원칙, 그리고 이를 유지하기 위한 가이드라인을 정의합니다.
 
 ---
 
@@ -22,7 +22,7 @@
 *   **형태**: 텍스트 기반의 미니멀 로고.
 *   **폰트**: `Pretendard 800 (ExtraBold)`
 *   **크기**: 기본 16pt (도각 및 헤더 적용 시)
-*   **브랜딩 텍스트**: `CAI CANVAS | PRINT ver.2` 또는 `CRE-TE` (사명 병행 사용)
+*   **브랜딩 텍스트**: `CAI CANVAS | PRINT ver.3` 또는 `CRE-TE` (사명 병행 사용)
 
 ### 2.2 핵심 컬러 (Primary Colors)
 *   **Focus/Action**: `#007BFF` (인터랙션 및 강조 컬러)

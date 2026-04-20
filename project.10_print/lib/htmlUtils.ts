@@ -27,7 +27,7 @@ function extractHead(html: string): string {
  * 페이지가 발견되지 않으면 원본 html을 요소 1개짜리 배열로 반환한다.
  */
 export function splitHtmlPages(html: string): string[] {
-  if (!html || html.trim() === '') return []
+  if (!html || html.trim() === '') return []  // 유효한 HTML 없음 — 빈 배열 의도적 반환
 
   const head = extractHead(html)
 

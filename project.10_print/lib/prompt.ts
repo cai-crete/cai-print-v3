@@ -1,3 +1,4 @@
+// 서버 전용 모듈 — 클라이언트 컴포넌트에서 import 금지 (fs 사용)
 import fs from 'fs'
 import path from 'path'
 

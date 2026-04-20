@@ -128,7 +128,7 @@ function ImageThumbnail({
   file: File
   onRemove: () => void
 }) {
-  const url = useMemo(() => URL.createObjectURL(file), [file])
+  const url = useMemo(() => URL.createObjectURL(file), [file.name, file.lastModified, file.size])
 
   useEffect(() => {
     return () => URL.revokeObjectURL(url)

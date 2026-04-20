@@ -15,7 +15,7 @@ const IMAGE_EXTS   = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif'])
 
 export async function GET() {
   if (!fs.existsSync(LIBRARY_DIR)) {
-    return NextResponse.json([] as LibraryFolder[])
+    return NextResponse.json({ folders: [] as LibraryFolder[], rootImages: [] as LibraryImage[] })
   }
 
   const entries = fs.readdirSync(LIBRARY_DIR, { withFileTypes: true })

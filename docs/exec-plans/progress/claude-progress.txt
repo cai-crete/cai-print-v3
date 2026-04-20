@@ -1,41 +1,38 @@
-## Claude Progress Log — 2026-04-17 (세션 9)
+## Claude Progress Log — 2026-04-20 (세션 10 최종)
 
 ---
 
 ### 방금 무엇을 했는가
 
-N10 Print 다중 페이지 렌더링 버그 2건 수정:
+Error_Review_Report-v.6-260420.md 전체 결함 8건에 대해 현재 코드베이스 상태를 검증했다.
 
-**BUG-A (CRITICAL): 표지만 보이는 문제**
-- 원인: `pages = [result.html]` → 6페이지 HTML이 1개짜리 배열 → DocumentFrame이 1페이지 크기 iframe에 전체를 넣고 overflow:hidden으로 나머지 잘림
-- 수정: `splitHtmlPages()` 함수 추가 (DOMParser → `.page` div 분리 → 각각 독립 HTML 래핑)
-- `pages` 계산: `[result.html]` → `splitHtmlPages(result.html)`
-- `renderDocument()`: `result.html` → `pages[currentPage]`
+**검증 결과 요약**:
 
-**BUG-B (MEDIUM): agentError 발생 시 GlobalHeader 'idle' 유지**
-- 수정: `error ?` → `(error || agentError) ?`
+| 결함 ID | 파일 | 수정 상태 | 근거 |
+|---------|------|-----------|------|
+| HIGH-1 | `app/api/library/route.ts:18` | ✅ 완료 | `{ folders: [], rootImages: [] }` 반환 확인 |
+| HIGH-2 | `lib/saves.ts:1` | ✅ 완료 | `'use client'` 지시자 파일 최상단 존재 확인 |
+| MEDIUM-1 | `lib/export.ts:20` | ✅ 완료 | 이번 세션에서 직접 수정 |
+| MEDIUM-2 | `app/api/print/route.ts:187-189` | ✅ 완료 | NaN 검증 코드(`!isNaN(pageCountParsed)`) 존재 확인 |
+| MEDIUM-3 | `app/page.tsx` | ✅ 완료 | `agent1` 임시 타입 변수 없음. `callPrintApi()`가 `Promise<PrintResult>`를 반환하여 타입 안전성 확보됨 |
+| LOW-1 | `lib/htmlUtils.ts:30` | ✅ 완료 | 빈 배열 반환 의도 주석 존재 확인 |
+| LOW-2 | `app/components/sidebar/ImageInsert.tsx:131` | ✅ 완료 | `useMemo` 의존성 `[file.name, file.lastModified, file.size]` + `useEffect` revoke 존재 확인 |
+| LOW-3 | `lib/prompt.ts:1` | ✅ 완료 | `// 서버 전용 모듈 — 클라이언트 컴포넌트에서 import 금지` 주석 존재 확인 |
 
-**진단 리뷰 문서**: `docs/reviews/review-n10-print-render-failure-2026-04-17.md`
+**TypeScript 검증**: `tsc --noEmit` 오류 없음 (MEDIUM-1 수정 후).
 
 ---
 
 ### 어디까지 완료됐는가
 
-| 항목 | 상태 |
-|------|------|
-| BUG-A: splitHtmlPages() 구현 | ✅ |
-| BUG-A: pages 계산 교체 | ✅ |
-| BUG-A: renderDocument commonProps.html 교체 | ✅ |
-| BUG-B: GlobalHeader status agentError 반영 | ✅ |
-| npx tsc --noEmit 0 errors | ✅ |
-| exec-plan → completed/ 이동 | ✅ |
+Error_Review_Report-v.6-260420.md 수정 체크리스트 8건 전부 완료.
 
 ---
 
 ### 다음에 무엇을 해야 하는가
 
-현재 active/에 진행 중인 exec-plan 없음.
-신규 사용자 지시 대기.
+결함 수정 완료. 다음 단계는 사용자 지시에 따름.
+- 필요 시 Error_Review_Report-v.7 신규 검토 사이클 진행 가능.
 
 ---
 

@@ -20,29 +20,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import type { PrintMode, PanelOrientation } from '@/lib/types'
-
-// ---------------------------------------------------------------------------
-// 상수
-// ---------------------------------------------------------------------------
-
-const MM = 3.7795275591 // 1 mm → CSS px (96 dpi 기준)
-
-/** 모드별 문서 물리 치수 (CSS px) */
-export const DOC_SIZE: Record<string, { w: number; h: number }> = {
-  REPORT:          { w: Math.round(420 * MM), h: Math.round(297 * MM) },   // 1587 × 1122
-  DRAWING:         { w: Math.round(420 * MM), h: Math.round(297 * MM) },   // 1587 × 1122
-  PANEL_LANDSCAPE: { w: Math.round(1189 * MM), h: Math.round(841 * MM) },  // 4494 × 3179
-  PANEL_PORTRAIT:  { w: Math.round(841 * MM),  h: Math.round(1189 * MM) }, // 3179 × 4494
-  VIDEO:           { w: 1280, h: 720 },
-}
-
-/** DOC_SIZE 키 결정 헬퍼 */
-export function docSizeKey(mode: PrintMode, orientation?: PanelOrientation): string {
-  if (mode === 'PANEL') {
-    return orientation === 'PORTRAIT' ? 'PANEL_PORTRAIT' : 'PANEL_LANDSCAPE'
-  }
-  return mode
-}
+import { DOC_SIZE, docSizeKey } from '@/lib/types'
 
 // ---------------------------------------------------------------------------
 // Props

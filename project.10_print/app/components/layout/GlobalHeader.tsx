@@ -31,7 +31,7 @@ export default function GlobalHeader({ status = 'idle' }: GlobalHeaderProps) {
           |&nbsp;PRINT
         </span>
         <span className="ml-1 text-[10px] font-pretendard font-normal text-[--color-gray-400]">
-          VER.2
+          VER.3
         </span>
       </h1>
 

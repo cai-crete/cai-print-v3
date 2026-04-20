@@ -27,7 +27,7 @@ interface ActionButtonsProps {
 const FORMAT_OPTIONS: Record<PrintMode, { label: string; value: ExportFormat }[]> = {
   REPORT:  [{ label: 'PDF', value: 'pdf' }, { label: 'JPG', value: 'jpg' }, { label: 'PNG', value: 'png' }],
   PANEL:   [{ label: 'PDF', value: 'pdf' }, { label: 'JPG', value: 'jpg' }, { label: 'PNG', value: 'png' }],
-  DRAWING: [{ label: 'PDF', value: 'pdf' }, { label: 'JPG', value: 'jpg' }, { label: 'PNG', value: 'png' }],
+  DRAWING: [{ label: 'PDF', value: 'pdf' }, { label: 'JPG', value: 'jpg' }, { label: 'PNG', value: 'png' }, { label: 'DXF', value: 'dxf' }],
   VIDEO:   [{ label: 'MP4', value: 'mp4' }],
 }
 

@@ -58,6 +58,69 @@ interface PartialLog {
 }
 
 // ---------------------------------------------------------------------------
+// Agent 출력 타입 (callAgent responseSchema 와 1:1 대응)
+// ---------------------------------------------------------------------------
+interface Agent1ImageItem {
+  id: string
+  filename: string
+  category: string
+  level: string
+  priorityScore: number
+  qualityScore: number
+  visionTags: string[]
+  isHero: boolean
+  fitMode: string
+}
+interface Agent1MasterData {
+  projectName: string
+  designer: string
+  company: string
+  address: string
+  engineer: string
+  approver: string
+  scale: string
+  drawingNumber: string
+  sheetNumber: string
+  originalFilename: string
+}
+interface Agent1Output {
+  images: Agent1ImageItem[]
+  masterData: Agent1MasterData
+  logPreStep: string
+  logStep1: string
+  logStep2: string
+}
+interface Agent2Phase1SlotItem {
+  slotId: string
+  pageNumber: number
+  role: string
+  imageId?: string | null
+  slotImageCount: number
+  maxLines: number
+  maxCharsPerLine: number
+}
+interface Agent2Phase1Output {
+  templateType: string
+  totalPages: number
+  slots: Agent2Phase1SlotItem[]
+  logStep3: string
+}
+interface Agent3TextItem {
+  slotId: string
+  content: string
+  lineCount: number
+}
+interface Agent3Output {
+  texts: Agent3TextItem[]
+  logStep4: string
+}
+interface Agent2Phase2Output {
+  html: string
+  slotMapping: Record<string, string>
+  logStep5: string
+}
+
+// ---------------------------------------------------------------------------
 // Gemini 에이전트 호출 헬퍼 (에이전트 식별자 포함)
 // ---------------------------------------------------------------------------
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -121,9 +184,9 @@ export async function POST(request: Request) {
     const formData = await request.formData()
     const mode = formData.get('mode') as PrintMode
     const promptText = (formData.get('prompt') as string) || ''
-    const pageCount = formData.get('pageCount')
-      ? parseInt(formData.get('pageCount') as string)
-      : undefined
+    const pageCountRaw = formData.get('pageCount')
+    const pageCountParsed = pageCountRaw ? parseInt(pageCountRaw as string, 10) : undefined
+    const pageCount = pageCountParsed !== undefined && !isNaN(pageCountParsed) ? pageCountParsed : undefined
 
     const files = formData.getAll('images') as File[]
 
@@ -265,7 +328,7 @@ export async function POST(request: Request) {
     const partialLog: PartialLog = {}
 
     // ── AGENT-1: Input 분석 ───────────────────────────────────────────────
-    let agent1: ReturnType<typeof Object>
+    let agent1!: Agent1Output
     try {
       agent1 = await callAgent(
         'AGENT-1',
@@ -326,7 +389,7 @@ export async function POST(request: Request) {
     partialLog.step2   = agent1.logStep2   ?? ''
 
     // ── AGENT-2 Phase 1: 레이아웃 계획 ───────────────────────────────────
-    let agent2Phase1: ReturnType<typeof Object>
+    let agent2Phase1!: Agent2Phase1Output
     try {
       agent2Phase1 = await callAgent(
         'AGENT-2-P1',
@@ -367,7 +430,7 @@ export async function POST(request: Request) {
     partialLog.step3 = agent2Phase1.logStep3 ?? ''
 
     // ── AGENT-3: 글 작성 ─────────────────────────────────────────────────
-    let agent3: ReturnType<typeof Object>
+    let agent3!: Agent3Output
     try {
       agent3 = await callAgent(
         'AGENT-3',
@@ -402,7 +465,7 @@ export async function POST(request: Request) {
     partialLog.step4 = agent3.logStep4 ?? ''
 
     // ── AGENT-2 Phase 2: 최종 조립 ────────────────────────────────────────
-    let agent2Phase2: ReturnType<typeof Object>
+    let agent2Phase2!: Agent2Phase2Output
     try {
       agent2Phase2 = await callAgent(
         'AGENT-2-P2',
@@ -426,15 +489,14 @@ export async function POST(request: Request) {
 
     // ── 이미지 후처리: src="imageId" → src="data:...;base64,..." 직접 치환 ─
     const imageDataMap: Record<string, string> = {};
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (agent1.images as any[]).forEach((img: { id: string }, idx: number) => {
+    agent1.images.forEach((img, idx) => {
       if (idx < contentsParts.length) {
         const { data, mimeType } = contentsParts[idx].inlineData
         imageDataMap[img.id] = `data:${mimeType};base64,${data}`
       }
     })
 
-    let finalHtml = (agent2Phase2.html as string) ?? ''
+    let finalHtml = agent2Phase2.html ?? ''
     for (const [imageId, dataUri] of Object.entries(imageDataMap)) {
       finalHtml = finalHtml.split(`src="${imageId}"`).join(`src="${dataUri}"`)
     }

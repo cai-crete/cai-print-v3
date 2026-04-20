@@ -21,7 +21,7 @@ const pretendard = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'CAI CANVAS | PRINT ver.2',
+  title: 'CAI CANVAS | PRINT ver.3',
   description: 'N10 print — 건축 프로젝트 산출물 자동 포맷팅 서비스. CRE-TE CO.,LTD.',
 }
 
