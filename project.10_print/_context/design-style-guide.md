@@ -112,12 +112,13 @@ PART B의 템플릿 전용 폰트(§B.1)와 별개로 관리됩니다.
 | :--- | :--- | :--- |
 | **52px** | `3.25rem` | CTA-primary, CTA-secondary |
 | **44px** | `2.75rem` | CTA-options, 기능 탭(NodeSelector 드롭다운), 숫자 인디케이터, 아이콘 버튼(툴바), 기타 가로형 입력 요소 |
-| **36px** | `2.25rem` | CTA-secondary-small **(예외 — 모달 내부 등 좁은 영역 전용. 최솟값 44px 규칙의 유일한 공인 예외)** |
+| **36px** | `2.25rem` | CTA-secondary-small **(예외 1 — 모달 내부 등 좁은 영역 전용)** |
+| **28px** | `1.75rem` | CTA-tertiary-small **(예외 2 — 패널 인라인 버튼 전용. SAVES·LIBRARY 내부에만 적용 가능)** |
 
 > **최소 터치/클릭 영역 규칙 (Touch Target Minimum)**
 > Apple Human Interface Guidelines 기준: **모든 인터랙티브 요소의 물리적 높이·너비 자체가 44px 이상이어야 한다.**
 > padding 보정으로 히트 영역만 44px를 확보하는 방식은 허용하지 않는다. 시각적 높이(height 속성)가 반드시 44px 이상이어야 한다.
-> **유일한 예외**: CTA-secondary-small (36px) — 모달 내부 등 좁은 영역에서만 사용하며, 이 예외는 다른 컴포넌트에 확장 적용이 불가하다.
+> **공인 예외 목록**: CTA-secondary-small (36px, 모달 내부 전용), CTA-tertiary-small (28px, 패널 인라인 전용). 이 두 예외 외에는 44px 최솟값을 엄격히 준수한다.
 
 ---
 
@@ -181,6 +182,30 @@ CTA(Call To Action) 버튼은 3종 + 1 variant로 분류한다.
 | :--- | :--- | :--- | :--- | :--- |
 | **default** | `white` | `black` | `1.5px solid black` | pointer |
 | **disabled** | `white` | `gray-300` | `1.5px solid gray-300` | not-allowed |
+
+---
+
+### CTA-tertiary-small (예: SAVES 내 삭제·불러오기, LIBRARY 내 선택 버튼)
+
+패널·리스트 내부의 인라인 소형 액션 버튼. CTA-secondary-small보다 한 단계 낮은 시각적 위계.
+`[N10 PRINT 전용]` SAVES, LIBRARY 등 패널 내부 인라인 버튼에 사용.
+
+| 속성 | 값 |
+| :--- | :--- |
+| 높이 | `1.75rem` (28px) |
+| 너비 | 내용에 따라 가변 (`fit-content`) |
+| 모서리 곡률 | `radius-box` (`0.625rem`) |
+| 폰트 | Bebas Neue / 타이틀 (16pt) |
+| 보더 | `1px solid` |
+
+| 상태 | 배경 | 텍스트 | 보더 | 커서 |
+| :--- | :--- | :--- | :--- | :--- |
+| **default** | `white` | `gray-500` | `1px solid gray-200` | pointer |
+| **hover** | `white` | `black` | `1px solid black` | pointer |
+| **disabled** | `white` | `gray-300` | `1px solid gray-200` | not-allowed |
+
+> **높이 예외 명시**: 28px는 §A.4 최솟값(44px) 및 CTA-secondary-small(36px)에 이어 두 번째 공인 예외. 패널 인라인 버튼(SAVES·LIBRARY 내부)에만 적용 가능하며, 다른 컨텍스트로 확장 불가.
+> **secondary-small과의 구분**: secondary-small은 모달 단일 버튼(검은 보더·텍스트, pill 형태), tertiary-small은 패널 인라인 다중 버튼(회색 보더·텍스트, box 형태).
 
 ---
 

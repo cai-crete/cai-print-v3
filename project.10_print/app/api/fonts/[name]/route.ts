@@ -8,9 +8,9 @@ import fs from 'fs'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { name: string } }
+  { params }: { params: Promise<{ name: string }> }
 ) {
-  const fontName = params.name
+  const { name: fontName } = await params
   const fontPath = path.join(process.cwd(), 'sources', 'fonts', fontName)
 
   if (!fs.existsSync(fontPath)) {

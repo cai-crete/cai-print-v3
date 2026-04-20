@@ -59,6 +59,9 @@ import { savesGet, savesSave, savesDelete } from '@/lib/saves'
 // -- Image utils
 import { compressImage } from '@/lib/imageUtils'
 
+// -- Thumbnail utils
+import { generateThumbnail, extractTitle } from '@/lib/thumbnailUtils'
+
 // =============================================================================
 // Helper — 다중 페이지 HTML 분리
 // =============================================================================
@@ -182,6 +185,7 @@ export default function PrintPage() {
   const [isLibraryLoading, setIsLibraryLoading] = useState(false)
   const [libraryActionTarget, setLibraryActionTarget] = useState<'common' | 'videoStart' | 'videoEnd' | null>(null)
   const [savedDocuments, setSavedDocuments]     = useState<SavedDocument[]>([])
+  const [currentDocId, setCurrentDocId]         = useState<string | null>(null)
 
   // -------------------------------------------------------------------------
   // 상태 — Undo / Redo 히스토리
@@ -298,6 +302,7 @@ export default function PrintPage() {
     setAgentError(null)
     setHistory([])
     setHistoryIndex(-1)
+    setCurrentDocId(null)
   }, [])
 
   // =========================================================================
@@ -448,28 +453,46 @@ export default function PrintPage() {
     setSavedDocuments(savesGet())
   }, [])
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!result) {
       window.alert('저장할 결과가 없습니다. 먼저 GENERATE를 통해 문서를 생성하세요.')
       return
     }
+
+    // 첫 페이지 HTML 추출
+    const allPages = result.html ? splitHtmlPages(result.html) : []
+    const firstPageHtml = allPages.length > 0 ? allPages[0] : (result.html ?? '')
+
+    // 썸네일 생성 (실패 시 undefined → 기존 이미지 아이콘으로 폴백)
+    const thumbnailUrl = await generateThumbnail(firstPageHtml, mode, orientation) ?? undefined
+
+    // 제목: masterData.projectName → HTML title → 모드명
+    const title = extractTitle(result, mode)
+
+    // 동일 세션 문서면 덮어쓰기, 첫 저장이면 새 ID 생성
+    const docId = currentDocId ?? `${Date.now()}`
+    const isNew = !currentDocId
+
     const doc: SavedDocument = {
-      id:        `${Date.now()}`,
-      title:     `${mode} 문서_${new Date().toLocaleTimeString('ko-KR')}`,
+      id:           docId,
+      title,
       mode,
       pageCount,
       result,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt:    isNew ? new Date().toISOString() : (savesGet().find(d => d.id === docId)?.createdAt ?? new Date().toISOString()),
+      updatedAt:    new Date().toISOString(),
+      thumbnailUrl,
     }
+
     const success = savesSave(doc)
     if (success) {
+      if (isNew) setCurrentDocId(docId)
       setSavedDocuments(savesGet())
       window.alert('현재 문서가 SAVES에 성공적으로 저장되었습니다.')
     } else {
       window.alert('문서 저장에 실패했습니다. (브라우저 저장 공간 초과 등)')
     }
-  }, [result, mode, pageCount])
+  }, [result, mode, pageCount, orientation, currentDocId])
 
   const handleOpenSaves = useCallback(() => {
     setSavedDocuments(savesGet())
@@ -482,6 +505,7 @@ export default function PrintPage() {
     setResult(doc.result)
     setCurrentPage(0)
     setError(null)
+    setCurrentDocId(doc.id)
   }, [])
 
   const handleSavesDelete = useCallback((docIds: string[]) => {

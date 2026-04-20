@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import sharp from 'sharp'
 
 /**
  * app/api/convert/route.ts — Convertio API 연동 엔드포인트
@@ -23,26 +24,37 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { file, filename, from_format } = await req.json()
+    const { file, filename } = await req.json()
 
     if (!file) {
       return NextResponse.json({ error: '전송된 파일 데이터가 없습니다.' }, { status: 400 })
     }
 
-    // 1. 변환 작업 생성 요청
-    // Base64 데이터에서 헤더 (data:image/png;base64,) 제거
-    const base64Data = file.split(',')[1] || file
+    // 1. 클라이언트 데이터 파싱 및 Sharp 전처리
+    const base64Parts = file.split(',')
+    const base64Data = base64Parts.length > 1 ? base64Parts[1] : base64Parts[0]
+    const buffer = Buffer.from(base64Data, 'base64')
 
+    const processedBuffer = await sharp(buffer)
+      .grayscale()
+      .median(3)          // 선의 자잘한 떨림(노이즈) 제거
+      .threshold(180)     // 뚜렷한 흑백 분리
+      .png()
+      .toBuffer()
+
+    const finalBase64 = processedBuffer.toString('base64')
+
+    // 2. 변환 작업 생성 요청
     const createRes = await fetch(CONVERTIO_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         apikey: API_KEY,
         input: 'base64',
-        file: base64Data,
-        filename: filename || 'drawing.svg',
+        file: finalBase64,
+        filename: filename || 'drawing.png',
         outputformat: 'dxf',
-        from_format: from_format || 'svg'
+        from_format: 'png'
       })
     })
 
@@ -54,7 +66,7 @@ export async function POST(req: NextRequest) {
 
     const taskId = createData.data.id
 
-    // 2. 상태 폴링 (비동기 처리)
+    // 3. 상태 폴링 (비동기 처리)
     let outputUrl = null
     for (let i = 0; i < MAX_POLLING_ATTEMPTS; i++) {
       await new Promise(r => setTimeout(r, STATUS_CHECK_INTERVAL_MS))
@@ -78,14 +90,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '변환 작업 타임아웃' }, { status: 504 })
     }
 
-    // 3. 변환된 파일 다운로드 및 반환
+    // 4. 변환된 파일 다운로드 및 반환
     const fileRes = await fetch(outputUrl)
+    if (!fileRes.ok) {
+      return NextResponse.json({ error: `변환 파일 다운로드 실패: ${fileRes.status}` }, { status: 502 })
+    }
     const fileBlob = await fileRes.blob()
+
+    const safeName = (filename ?? 'drawing').replace(/\.[^/.]+$/, '')
 
     return new NextResponse(fileBlob, {
       headers: {
-        'Content-Type': 'application/dxf',
-        'Content-Disposition': `attachment; filename="${filename.replace(/\.[^/.]+$/, "")}.dxf"`
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${safeName}.dxf"`
       }
     })
 

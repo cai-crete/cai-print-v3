@@ -1,38 +1,45 @@
-## Claude Progress Log — 2026-04-20 (세션 10 최종)
+## Claude Progress Log — 2026-04-20 (세션 13)
 
 ---
 
 ### 방금 무엇을 했는가
 
-Error_Review_Report-v.6-260420.md 전체 결함 8건에 대해 현재 코드베이스 상태를 검증했다.
+n10-print 전체 코드 리뷰 및 정합성 검토 완료.
 
-**검증 결과 요약**:
+**검토 파일 범위**:
+- `lib/`: types.ts, export.ts, thumbnailUtils.ts, saves.ts, htmlUtils.ts, imageUtils.ts, agentErrors.ts, prompt.ts
+- `app/page.tsx`
+- `app/api/`: print/route.ts, convert/route.ts, library/route.ts, library/image/route.ts
+- `app/components/`: Canvas, Toolbar, DocumentFrame, ReportTemplate, SavesModal, ActionButtons
 
-| 결함 ID | 파일 | 수정 상태 | 근거 |
-|---------|------|-----------|------|
-| HIGH-1 | `app/api/library/route.ts:18` | ✅ 완료 | `{ folders: [], rootImages: [] }` 반환 확인 |
-| HIGH-2 | `lib/saves.ts:1` | ✅ 완료 | `'use client'` 지시자 파일 최상단 존재 확인 |
-| MEDIUM-1 | `lib/export.ts:20` | ✅ 완료 | 이번 세션에서 직접 수정 |
-| MEDIUM-2 | `app/api/print/route.ts:187-189` | ✅ 완료 | NaN 검증 코드(`!isNaN(pageCountParsed)`) 존재 확인 |
-| MEDIUM-3 | `app/page.tsx` | ✅ 완료 | `agent1` 임시 타입 변수 없음. `callPrintApi()`가 `Promise<PrintResult>`를 반환하여 타입 안전성 확보됨 |
-| LOW-1 | `lib/htmlUtils.ts:30` | ✅ 완료 | 빈 배열 반환 의도 주석 존재 확인 |
-| LOW-2 | `app/components/sidebar/ImageInsert.tsx:131` | ✅ 완료 | `useMemo` 의존성 `[file.name, file.lastModified, file.size]` + `useEffect` revoke 존재 확인 |
-| LOW-3 | `lib/prompt.ts:1` | ✅ 완료 | `// 서버 전용 모듈 — 클라이언트 컴포넌트에서 import 금지` 주석 존재 확인 |
+**발견 이슈 요약**:
 
-**TypeScript 검증**: `tsc --noEmit` 오류 없음 (MEDIUM-1 수정 후).
+| 등급 | 파일 | 내용 |
+|------|------|------|
+| HIGH | `lib/thumbnailUtils.ts` | visibility:hidden 사용 — export.ts에서 명시 금지된 패턴, html2canvas 무음 실패 가능 |
+| HIGH | `lib/htmlUtils.ts` | 완전 미사용 파일 — page.tsx에 자체 단순 버전이 따로 있어 stmlUtils.ts가 사문화됨 |
+| MED | `Canvas.tsx` | `mode` prop 정의되었으나 컴포넌트에서 미사용 |
+| MED | `SavesModal.tsx` | `onAddDocument` prop + `handleAddClick` — UI 연결 없는 dead code |
+| MED | `lib/export.ts` | DXF scale 주석 4 vs 실제 코드 3 불일치 |
+| MED | `api/convert/route.ts` | 클라이언트가 보내는 `from_format` 파라미터를 서버가 읽지 않음 |
+| LOW | `page.tsx` | `onSelectImages` 인라인 async, useCallback 누락 |
+| LOW | `lib/export.ts` + `lib/types.ts` | MM 상수(3.7795275591) 각 파일에 중복 로컬 정의 |
+| LOW | `lib/thumbnailUtils.ts` | html2canvas 불필요한 동적 import (클라이언트 전용 파일) |
 
 ---
 
 ### 어디까지 완료됐는가
 
-Error_Review_Report-v.6-260420.md 수정 체크리스트 8건 전부 완료.
+- 리뷰 문서: `docs/reviews/review-n10-print-code-integrity-2026-04-20.md` 작성 완료
+- exec-plan: `docs/exec-plans/active/exec-plan-n10-print-code-review-2026-04-20.md` 생성
 
 ---
 
 ### 다음에 무엇을 해야 하는가
 
-결함 수정 완료. 다음 단계는 사용자 지시에 따름.
-- 필요 시 Error_Review_Report-v.7 신규 검토 사이클 진행 가능.
+- 사용자가 이슈 수정을 지시하면 해당 항목 순차 처리
+  - 우선순위: H-1 (thumbnailUtils visibility:hidden) → H-2 (htmlUtils.ts 통합) → MED 순
+- 수정 없이 리뷰만 원하는 경우 → 완료 상태
 
 ---
 
