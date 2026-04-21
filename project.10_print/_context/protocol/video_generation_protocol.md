@@ -1,17 +1,24 @@
-# 비디오 생성 및 운영 프로토콜 (Video Generation Protocol v1.0)
+# 비디오 생성 및 운영 프로토콜 (Video Generation Protocol v2.0)
 
 본 문서는 CAI CANVAS | PRINT의 비디오 생성 서비스 구현을 위한 기술 사양 및 운영 규칙을 정의합니다. 특히 건축적 정밀도를 유지하기 위한 AI 프롬프트 제어 로직을 핵심으로 다룹니다.
+
+> **v2.0 변경 이력**: Google Veo 3.1 Lite → Kling O3 (fal.ai) 전환 (2026-04-21)
 
 ---
 
 ## I. 시스템 아키텍처 및 모델 사양
 
-*   **모델 (Target Model):** `models/veo-3.1-lite-generate-preview`
-*   **API 버전:** Google GenAI API v1beta
-*   **엔드포인트:** `generateVideos`
+*   **모델 (Target Model):** `fal-ai/kling-video/v2.1/pro/image-to-video` (Kling O3)
+*   **공급자:** fal.ai
+*   **인증:** `FAL_KEY` 환경변수 (`process.env.FAL_KEY`, 서버 사이드 전용)
 *   **데이터 구조:** 
-    *   **Input:** 시작 프레임(Start Image), 종료 프레임(End Image), 시스템 프롬프트
-    *   **Output:** `operation.video.uri`를 통한 MP4 영상 스트림
+    *   **Input:**
+        *   시작 프레임(`image_url`) — fal.ai Storage URL
+        *   종료 프레임(`tail_image_url`) — fal.ai Storage URL (보간 기준)
+        *   시스템 프롬프트(`prompt`) — VIDEO:INJECTION 블록 + 사용자 입력
+        *   지속 시간(`duration`) — `"5"` 초 (기본값)
+        *   비율(`aspect_ratio`) — `"16:9"` (기본값)
+    *   **Output:** `result.data.video.url` → MP4 URL
 
 ---
 
@@ -59,18 +66,19 @@
 
 ### 2. 출력 및 내보내기 (Export) 정책
 *   **전용 포맷:** 비디오 모드에서는 오직 **VIDEO (MP4)** 형식만 내보낼 수 있습니다. (PDF, PNG, JPEG는 비활성화)
-*   **네이밍 규칙:** 생성된 영상의 기본 파일명은 `video-example-1.mp4` 형식을 따릅니다.
+*   **네이밍 규칙:** 생성된 영상의 기본 파일명은 `video_[timestamp].mp4` 형식을 따릅니다.
 
 ### 3. 데이터 바인딩 로직
-*   **블록 ID:** 생성된 영상의 URI는 `video-main` ID를 가진 이미지 블록의 `content` 속성에 주입됩니다.
-*   **템플릿:** `VideoTemplate.tsx`가 해당 URI를 감지하여 커스텀 플레이어(재생/일시정지/프로그레스 바)를 렌더링합니다.
+*   **반환 필드:** 생성된 영상 URL은 `PrintResult.videoUri`에 저장됩니다.
+*   **템플릿:** `VideoTemplate.tsx`가 해당 URL을 감지하여 커스텀 플레이어(재생/일시정지/프로그레스 바)를 렌더링합니다.
 
 ---
 
 ## IV. 에러 핸들링 및 상태 관리
 
-*   **API 활성화 오류 (403 Forbidden):** 사용자가 구글 클라우드 콘솔에서 API를 활성화하지 않은 경우, 단순 오류 대신 **"API 활성화가 필요합니다"**라는 구체적인 안내 팝업을 출력합니다.
-*   **생성 로딩 (Gray Filling):** 영상 생성 중에는 `VideoTemplate`에 회색 바가 왼쪽에서 오른쪽으로 차오르는 **Architectural Loading Board** 애니메이션을 노출하여 진행 상황(0~100%)을 시각화합니다.
+*   **FAL_KEY 미설정 (500):** `FAL_KEY` 환경변수가 없을 경우 즉시 500 오류와 안내 메시지를 반환합니다.
+*   **이미지 업로드 실패:** fal.ai Storage 업로드 실패 시 `catch` 블록에서 처리되어 사용자에게 오류 메시지를 표시합니다.
+*   **생성 로딩 (Gray Filling):** 영상 생성 중에는 `VideoTemplate`에 회색 바가 왼쪽에서 오른쪽으로 차오르는 **Architectural Loading Board** 애니메이션을 노출하여 진행 상황을 시각화합니다.
 
 ---
 

@@ -2,9 +2,8 @@
 
 /**
  * VideoTemplate.tsx — VIDEO 모드 전용 렌더러
- * Veo 3.1 Lite API를 통해 생성된 영상을 렌더링하는 컴포넌트.
- * N10-print.md Output Contract: videoUri → MP4 스트림 URI
- * design-style-guide.md §1: 16:9, 8초, Veo 3.1 lite
+ * Kling O3 (fal.ai)를 통해 생성된 영상을 렌더링하는 컴포넌트.
+ * N10-print.md Output Contract: videoUri → MP4 URL
  * COPYRIGHTS 2026. CRE-TE CO.,LTD. ALL RIGHTS RESERVED.
  */
 
@@ -46,7 +45,7 @@ export default function VideoTemplate({ videoUri, isLoading }: VideoTemplateProp
             GENERATING VIDEO
           </span>
           <span className="text-[10px] tracking-widest text-[--color-text-caption] uppercase">
-            Veo 3.1 Lite — Rendering Architectural Perspective
+            Kling O3 — Rendering Architectural Perspective
           </span>
         </div>
 

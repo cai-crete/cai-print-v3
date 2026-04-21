@@ -65,10 +65,7 @@ export function buildAgentSystemPrompt(agentId: '1' | '2' | '3'): string {
 
 /**
  * video_generation_protocol.md의 <!-- VIDEO:INJECTION --> 블록을 파싱하여
- * Veo API에 전달할 완성 프롬프트 문자열을 구성한다.
- *
- * VIDEO 모드에서 Veo API는 systemInstruction이 아닌 prompt 문자열을 사용하므로
- * 프로토콜 내용을 prompt에 직접 주입한다.
+ * Kling O3 API에 전달할 완성 프롬프트 문자열을 구성한다.
  *
  * @param userPrompt 사용자가 입력한 추가 지시 (없으면 빈 문자열)
  */
@@ -126,7 +123,7 @@ export function buildSystemPrompt(
  *
  * REPORT / PANEL : Protocol + ai_generation_protocol + PROMPT_건축작가
  * DRAWING        : Protocol + ai_generation_protocol
- * VIDEO          : Protocol + video_generation_protocol
+ * VIDEO          : Protocol + video_generation_protocol (Kling O3)
  */
 export type PrintMode = 'REPORT' | 'PANEL' | 'DRAWING' | 'VIDEO'
 
@@ -135,7 +132,7 @@ const TEMPLATE_FILES: Partial<Record<PrintMode, string>> = {
   REPORT: 'Report_template.html',
   PANEL: 'Panel_template.html',
   DRAWING: 'DrawingSpecification_template.html',
-  // VIDEO: Veo API 직접 호출 — HTML 템플릿 없음
+  // VIDEO: Kling O3 (fal.ai) 직접 호출 — HTML 템플릿 없음
 }
 
 /**
@@ -144,7 +141,7 @@ const TEMPLATE_FILES: Partial<Record<PrintMode, string>> = {
  * 용도: Gemini에게 시각 구조를 제공하여 동일한 레이아웃의 완성 HTML을 생성하게 한다.
  * Protocol Immutable Constant 2 (템플릿 HTML 구조 불변) 적용 기준.
  *
- * VIDEO 모드는 빈 문자열을 반환한다 (Veo API 사용, 템플릿 없음).
+ * VIDEO 모드는 빈 문자열을 반환한다 (Kling O3 사용, 템플릿 없음).
  */
 export function loadTemplate(mode: PrintMode): string {
   const filename = TEMPLATE_FILES[mode]

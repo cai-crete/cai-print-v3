@@ -175,7 +175,7 @@ async function exportImage(
 
 async function exportVideo(videoUri?: string | null): Promise<void> {
   if (!videoUri) {
-    throw new Error('VIDEO 파일이 없습니다. (Veo API 연동은 Stage 6에서 구현 예정)')
+    throw new Error('VIDEO 파일이 없습니다. 먼저 GENERATE를 통해 비디오를 생성하세요.')
   }
   triggerDownload(videoUri, `video_${Date.now()}.mp4`)
 }

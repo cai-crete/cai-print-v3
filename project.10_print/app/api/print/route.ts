@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { buildAgentSystemPrompt, buildVideoInjectionPrompt, loadTemplate, PrintMode } from '@/lib/prompt'
 import { GoogleGenAI } from '@google/genai'
+import { fal, ApiError as FalApiError } from '@fal-ai/client'
 import {
   AgentError,
   AgentLabel,
@@ -14,6 +15,21 @@ import {
 export const maxDuration = 300
 
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY })
+
+// Kling O3 모델 ID (fal.ai)
+const KLING_MODEL_ID = 'fal-ai/kling-video/v2.1/pro/image-to-video'
+
+// fal.ai ApiError → 원인 진단용 상세 문자열 추출
+function falErrorDetail(err: unknown): string {
+  if (err instanceof FalApiError) {
+    const bodyMsg =
+      typeof err.body === 'object' && err.body !== null && 'detail' in err.body
+        ? String((err.body as Record<string, unknown>).detail)
+        : JSON.stringify(err.body ?? '')
+    return `HTTP ${err.status}${err.requestId ? ` | requestId: ${err.requestId}` : ''} | ${bodyMsg || err.message}`
+  }
+  return err instanceof Error ? err.message : String(err)
+}
 
 // SECURITY.md §입력 검증
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024 // 20MB
@@ -228,68 +244,76 @@ export async function POST(request: Request) {
       )
     }
 
-    // VIDEO 모드 — Veo 3.1 Lite API
+    // VIDEO 모드 — Kling O3 (fal.ai)
     if (mode === 'VIDEO') {
+      const falKey = process.env.FAL_KEY
+      if (!falKey) {
+        return NextResponse.json({ error: 'FAL_KEY 환경변수가 설정되지 않았습니다.' }, { status: 500 })
+      }
+      fal.config({ credentials: falKey })
+
       const [startFile, endFile] = files
       const fullPrompt = buildVideoInjectionPrompt(promptText)
 
-      const startBuf = await startFile.arrayBuffer()
-      const endBuf   = await endFile.arrayBuffer()
-      const startB64 = Buffer.from(startBuf).toString('base64')
-      const endB64   = Buffer.from(endBuf).toString('base64')
+      // fal.ai Storage에 이미지 업로드 (시작/종료 프레임)
+      const startBuf  = await startFile.arrayBuffer()
+      const endBuf    = await endFile.arrayBuffer()
+      const startBlob = new Blob([startBuf], { type: startFile.type })
+      const endBlob   = new Blob([endBuf],   { type: endFile.type })
 
-      let operation = await withRetry(() =>
-        withTimeout(
-          ai.models.generateVideos({
-            model:     'models/veo-3.1-lite-generate-preview',
-            prompt:    fullPrompt,
-            image: {
-              imageBytes: startB64,
-              mimeType:   startFile.type,
-            },
-            config: {
-              aspectRatio:     '16:9',
-              numberOfVideos:  1,
-              durationSeconds: 8,
-              lastFrame: {
-                imageBytes: endB64,
-                mimeType:   endFile.type,
-              },
-            },
-          }),
-          API_TIMEOUT_MS
+      let startImageUrl: string
+      let endImageUrl: string
+      try {
+        ;[startImageUrl, endImageUrl] = await Promise.all([
+          fal.storage.upload(startBlob),
+          fal.storage.upload(endBlob),
+        ])
+      } catch (uploadErr) {
+        const detail = falErrorDetail(uploadErr)
+        return NextResponse.json(
+          { error: `[이미지 업로드 실패] fal.ai Storage 업로드 중 오류가 발생했습니다. ${detail}` },
+          { status: 500 }
         )
-      )
-
-      const POLL_INTERVAL_MS = 10_000
-      const MAX_POLLS        = 30
-
-      for (let i = 0; i < MAX_POLLS && !operation.done; i++) {
-        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
-        operation = await ai.operations.getVideosOperation({ operation })
       }
 
-      if (!operation.done) {
-        throw new Error('비디오 생성 시간 초과 (5분). 잠시 후 다시 시도해 주세요.')
+      // Kling O3 비디오 생성 (완료까지 폴링)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let result: any
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        result = await (fal as any).subscribe(KLING_MODEL_ID, {
+          input: {
+            prompt:         fullPrompt,
+            image_url:      startImageUrl,
+            tail_image_url: endImageUrl,
+            duration:       '5',
+            aspect_ratio:   '16:9',
+          },
+          logs: true,
+        })
+      } catch (modelErr) {
+        const detail = falErrorDetail(modelErr)
+        return NextResponse.json(
+          { error: `[비디오 생성 실패] Kling O3 모델 호출 중 오류가 발생했습니다. ${detail}` },
+          { status: 500 }
+        )
       }
 
-      if (operation.error) {
-        const errMsg = operation.error.message || JSON.stringify(operation.error)
-        throw new Error(`[API Error] 비디오 생성 실패: ${errMsg}`)
-      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = result?.data as any
+      const videoUri: string | undefined = data?.video?.url ?? data?.video_url
 
-      const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri
       if (!videoUri) {
-        throw new Error('Veo API에서 비디오 URI를 반환하지 않았습니다.')
+        throw new Error('Kling O3 API에서 비디오 URL을 반환하지 않았습니다. (requestId: ' + (result?.requestId ?? 'N/A') + ')')
       }
 
       return NextResponse.json({
         executionLog: {
           preStep: `시작 이미지: ${startFile.name} / 종료 이미지: ${endFile.name}`,
-          step1:   '이미지 base64 변환 완료',
-          step2:   `Veo 3.1 Lite 호출 완료 — 프롬프트 ${fullPrompt.length}자`,
-          step3:   `Operation: ${operation.name ?? 'N/A'}`,
-          step4:   '비디오 생성 완료 (폴링 종료)',
+          step1:   '이미지 fal.ai Storage 업로드 완료',
+          step2:   `Kling O3 호출 완료 — 프롬프트 ${fullPrompt.length}자`,
+          step3:   `requestId: ${result?.requestId ?? 'N/A'}`,
+          step4:   '비디오 생성 완료',
           step5:   'videoUri 수신 완료',
         },
         html:        '',
