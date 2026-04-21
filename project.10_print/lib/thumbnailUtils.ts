@@ -11,6 +11,7 @@
  * COPYRIGHTS 2026. CRE-TE CO.,LTD. ALL RIGHTS RESERVED.
  */
 
+import html2canvas from 'html2canvas'
 import type { PrintResult, PrintMode, PanelOrientation } from './types'
 import { DOC_SIZE, docSizeKey } from './types'
 
@@ -36,7 +37,6 @@ export async function generateThumbnail(
     `top:0`,
     `width:${docW}px`,
     `height:${docH}px`,
-    `visibility:hidden`,
     `pointer-events:none`,
     `border:none`,
     `z-index:-1`,
@@ -57,9 +57,6 @@ export async function generateThumbnail(
 
     const iframeDoc = iframe.contentDocument
     if (!iframeDoc) return null
-
-    // html2canvas 동적 import (서버 번들 제외)
-    const { default: html2canvas } = await import('html2canvas')
 
     const captured = await html2canvas(iframeDoc.documentElement, {
       width:    docW,

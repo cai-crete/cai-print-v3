@@ -1,45 +1,42 @@
-## Claude Progress Log — 2026-04-20 (세션 13)
+## Claude Progress Log — 2026-04-21 (세션 14)
 
 ---
 
 ### 방금 무엇을 했는가
 
-n10-print 전체 코드 리뷰 및 정합성 검토 완료.
+n10-print 코드 리뷰(2026-04-20)에서 발견된 이슈 8건 전체 수정 완료.
 
-**검토 파일 범위**:
-- `lib/`: types.ts, export.ts, thumbnailUtils.ts, saves.ts, htmlUtils.ts, imageUtils.ts, agentErrors.ts, prompt.ts
-- `app/page.tsx`
-- `app/api/`: print/route.ts, convert/route.ts, library/route.ts, library/image/route.ts
-- `app/components/`: Canvas, Toolbar, DocumentFrame, ReportTemplate, SavesModal, ActionButtons
-
-**발견 이슈 요약**:
-
-| 등급 | 파일 | 내용 |
+| 이슈 | 파일 | 처리 |
 |------|------|------|
-| HIGH | `lib/thumbnailUtils.ts` | visibility:hidden 사용 — export.ts에서 명시 금지된 패턴, html2canvas 무음 실패 가능 |
-| HIGH | `lib/htmlUtils.ts` | 완전 미사용 파일 — page.tsx에 자체 단순 버전이 따로 있어 stmlUtils.ts가 사문화됨 |
-| MED | `Canvas.tsx` | `mode` prop 정의되었으나 컴포넌트에서 미사용 |
-| MED | `SavesModal.tsx` | `onAddDocument` prop + `handleAddClick` — UI 연결 없는 dead code |
-| MED | `lib/export.ts` | DXF scale 주석 4 vs 실제 코드 3 불일치 |
-| MED | `api/convert/route.ts` | 클라이언트가 보내는 `from_format` 파라미터를 서버가 읽지 않음 |
-| LOW | `page.tsx` | `onSelectImages` 인라인 async, useCallback 누락 |
-| LOW | `lib/export.ts` + `lib/types.ts` | MM 상수(3.7795275591) 각 파일에 중복 로컬 정의 |
-| LOW | `lib/thumbnailUtils.ts` | html2canvas 불필요한 동적 import (클라이언트 전용 파일) |
+| H-1 | `lib/thumbnailUtils.ts` | `visibility:hidden` 제거 (오프스크린 배치는 이미 적용됨) |
+| H-2 | `app/page.tsx` + `lib/htmlUtils.ts` | 인라인 splitHtmlPages 제거 → htmlUtils.ts import로 교체 |
+| M-1 | `Canvas.tsx`, `page.tsx` | CanvasProps에서 mode 필드 제거, Canvas 호출부 mode={mode} 제거 |
+| M-2 | `SavesModal.tsx` | onAddDocument prop, handleAddClick 함수 전체 제거 |
+| M-4 | `lib/export.ts` | fetch body에서 from_format: 'png' 제거 |
+| L-1 | `app/page.tsx` | onSelectImages 인라인 async → handleSelectImages useCallback으로 추출 |
+| L-2 | `lib/types.ts`, `lib/export.ts` | types.ts MM → export const로 변경, export.ts에서 로컬 상수 제거 후 import |
+| L-3 | `lib/thumbnailUtils.ts` | html2canvas 동적 import → 정적 import로 교체 |
+| M-3 | — | 커밋 28abc0d에서 자동 해소 (수정 불필요) |
+
+**빌드 확인**: `tsc --noEmit` 오류 없음
 
 ---
 
 ### 어디까지 완료됐는가
 
-- 리뷰 문서: `docs/reviews/review-n10-print-code-integrity-2026-04-20.md` 작성 완료
-- exec-plan: `docs/exec-plans/active/exec-plan-n10-print-code-review-2026-04-20.md` 생성
+- exec-plan-n10-print-code-review-2026-04-20 → `completed/` 이동 완료
+- exec-plan-n10-print-issue-fix-2026-04-21 → `completed/` 이동 완료
+- 리뷰 문서: `docs/reviews/review-n10-print-code-integrity-2026-04-20.md` 보존
 
 ---
 
 ### 다음에 무엇을 해야 하는가
 
-- 사용자가 이슈 수정을 지시하면 해당 항목 순차 처리
-  - 우선순위: H-1 (thumbnailUtils visibility:hidden) → H-2 (htmlUtils.ts 통합) → MED 순
-- 수정 없이 리뷰만 원하는 경우 → 완료 상태
+- 현재 열린 이슈 없음
+- 권장: 브라우저에서 다음 기능 동작 검증
+  - 썸네일 생성 (generateThumbnail — visibility:hidden 제거 효과)
+  - 라이브러리 이미지 다중 선택 (handleSelectImages)
+  - DXF 변환 (from_format 제거 후 이상 없는지)
 
 ---
 

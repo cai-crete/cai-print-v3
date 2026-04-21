@@ -176,7 +176,7 @@ export interface AgentErrorInfo {
 // 9. 문서 물리 치수 상수 (CSS px @ 96 dpi)
 // ---------------------------------------------------------------------------
 
-const MM = 3.7795275591 // 1 mm → CSS px (96 dpi 기준)
+export const MM = 3.7795275591 // 1 mm → CSS px (96 dpi 기준)
 
 /** 모드별 문서 물리 치수 (CSS px) */
 export const DOC_SIZE: Record<string, { w: number; h: number }> = {

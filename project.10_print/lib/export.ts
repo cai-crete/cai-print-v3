@@ -17,9 +17,7 @@
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import type { PrintMode, PanelOrientation, ExportFormat } from './types'
-import { DOC_SIZE, docSizeKey } from './types'
-
-const MM = 3.7795275591 // 1 mm → CSS px (96 dpi)
+import { DOC_SIZE, MM, docSizeKey } from './types'
 const IFRAME_LOAD_TIMEOUT_MS = 15_000
 const RENDER_SETTLE_MS = 400 // 폰트·이미지 로딩 여유 시간
 
@@ -204,7 +202,6 @@ async function exportDxf(canvas: HTMLCanvasElement, filename: string): Promise<v
     body: JSON.stringify({
       file: base64,
       filename: filename,
-      from_format: 'png'
     })
   })
 

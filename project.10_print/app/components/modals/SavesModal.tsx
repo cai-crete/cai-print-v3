@@ -9,7 +9,6 @@ interface SavesModalProps {
   documents: SavedDocument[]
   onOpen: (doc: SavedDocument) => void
   onDeleteBatch?: (docIds: string[]) => void
-  onAddDocument?: (mode: string) => void
 }
 
 const TABS = ['전체', 'REPORT', 'DRAWING&SPECIFICATION', 'PANEL', 'VIDEO'] as const
@@ -21,7 +20,6 @@ export default function SavesModal({
   documents,
   onOpen,
   onDeleteBatch,
-  onAddDocument,
 }: SavesModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>('전체')
   const [isDeleteMode, setIsDeleteMode] = useState(false)
@@ -50,13 +48,6 @@ export default function SavesModal({
     }
     setIsDeleteMode(false)
     setSelectedIds(new Set())
-  }
-
-  const handleAddClick = () => {
-    if (onAddDocument) {
-      let mode = activeTab === '전체' ? 'REPORT' : activeTab === 'DRAWING&SPECIFICATION' ? 'DRAWING' : activeTab
-      onAddDocument(mode)
-    }
   }
 
   return (

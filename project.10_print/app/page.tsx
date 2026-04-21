@@ -62,32 +62,8 @@ import { compressImage } from '@/lib/imageUtils'
 // -- Thumbnail utils
 import { generateThumbnail, extractTitle } from '@/lib/thumbnailUtils'
 
-// =============================================================================
-// Helper — 다중 페이지 HTML 분리
-// =============================================================================
-
-/**
- * AGENT-2-P2가 생성한 HTML에는 여러 `.page` div가 세로로 쌓여 있다.
- * DocumentFrame은 단일 페이지 크기(A3 = 1122px)로 iframe을 고정하므로
- * 전체 HTML을 그대로 넣으면 첫 페이지만 보이고 나머지는 overflow:hidden에 잘린다.
- * 이 함수는 `.page` 단위로 HTML을 분리하여 각각을 완전한 독립 HTML 문서로 래핑한다.
- */
-function splitHtmlPages(fullHtml: string): string[] {
-  // SSR 환경에서는 분리 불가 — 원본 반환 (handleGenerate는 클라이언트 전용)
-  if (typeof window === 'undefined') return [fullHtml]
-
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(fullHtml, 'text/html')
-  const pageEls = Array.from(doc.querySelectorAll('.page'))
-
-  // .page 요소가 없으면 원본 반환 (VIDEO 등 비표준 출력 대비)
-  if (pageEls.length === 0) return [fullHtml]
-
-  const headHtml = doc.head.outerHTML
-  return pageEls.map((page) =>
-    `<!DOCTYPE html><html lang="ko">${headHtml}<body>${page.outerHTML}</body></html>`
-  )
-}
+// -- HTML utils
+import { splitHtmlPages } from '@/lib/htmlUtils'
 
 // =============================================================================
 // Helper — 에이전트 구조화 오류 전달용 클래스
@@ -513,6 +489,25 @@ export default function PrintPage() {
     setSavedDocuments(savesGet())
   }, [])
 
+  const handleSelectImages = useCallback(async (imgs: LibraryImage[]) => {
+    const files = await Promise.all(imgs.map(async img => {
+      const res = await fetch(img.url)
+      const blob = await res.blob()
+      const raw = new File([blob], img.name, { type: blob.type })
+      return compressImage(raw)
+    }))
+
+    if (libraryActionTarget === 'common') {
+      setImages(prev => [...prev, ...files])
+    } else if (libraryActionTarget === 'videoStart') {
+      setVideoStartImage(files[0] ?? null)
+    } else if (libraryActionTarget === 'videoEnd') {
+      setVideoEndImage(files[0] ?? null)
+    }
+    setLibraryActionTarget(null)
+    setIsLibraryOpen(false)
+  }, [libraryActionTarget])
+
   // =========================================================================
   // Generate 조건: canGenerate
   // =========================================================================
@@ -578,7 +573,6 @@ export default function PrintPage() {
 
       {/* 3. 중앙 캔버스 */}
       <Canvas
-        mode={mode}
         isEmpty={!result}
         isLoading={isGenerating}
       >
@@ -721,24 +715,7 @@ export default function PrintPage() {
         mode={libraryActionTarget ? 'select' : 'manage'}
         maxSelect={mode === 'VIDEO' && libraryActionTarget ? 1 : undefined}
         onSelectImage={handleLibrarySelectImage}
-        onSelectImages={async (imgs) => {
-          const files = await Promise.all(imgs.map(async img => {
-            const res = await fetch(img.url)
-            const blob = await res.blob()
-            const raw = new File([blob], img.name, { type: blob.type })
-            return compressImage(raw)
-          }))
-          
-          if (libraryActionTarget === 'common') {
-            setImages(prev => [...prev, ...files])
-          } else if (libraryActionTarget === 'videoStart') {
-            setVideoStartImage(files[0] ?? null)
-          } else if (libraryActionTarget === 'videoEnd') {
-            setVideoEndImage(files[0] ?? null)
-          }
-          setLibraryActionTarget(null)
-          setIsLibraryOpen(false)
-        }}
+        onSelectImages={handleSelectImages}
         // 이 아래는 manage 모드 전용 prop
         onAddFolder={handleLibraryAddFolder}
         onDeleteFolders={handleLibraryDeleteFolders}

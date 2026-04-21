@@ -82,7 +82,6 @@ function LoadingState() {
 // ---------------------------------------------------------------------------
 
 interface CanvasProps {
-  mode?: string
   children?: React.ReactNode
   isEmpty: boolean
   isLoading: boolean
