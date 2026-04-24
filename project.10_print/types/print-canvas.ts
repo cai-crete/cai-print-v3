@@ -22,11 +22,22 @@ export interface PrintSaveResult {
 }
 
 export interface PrintToolbarTools {
-  undo: ReactNode;
-  redo: ReactNode;
-  library: ReactNode;
-  saves: ReactNode;
-  save: ReactNode;
+  canUndo: boolean;
+  onUndo: () => void;
+  
+  canRedo: boolean;
+  onRedo: () => void;
+  
+  onOpenLibrary: () => void;
+  onOpenSaves: () => void;
+  onSave: () => Promise<void> | void;
+  
+  // 🟢 신규 추가 요청
+  onNewProject: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onZoomReset?: () => void;
+  zoom: number;
 }
 
 export interface PrintExpandedViewProps {

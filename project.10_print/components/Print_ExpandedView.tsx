@@ -181,9 +181,13 @@ export function PrintExpandedView(props: PrintExpandedViewProps) {
     const processImages = async () => {
       try {
         const newFiles = await Promise.all(props.selectedImages!.map(async (img) => {
-          const res = await fetch(`data:${img.mimeType};base64,${img.base64}`);
+          const dataUri = img.base64.startsWith('data:') 
+            ? img.base64 
+            : `data:${img.mimeType};base64,${img.base64}`;
+          const res = await fetch(dataUri);
           const blob = await res.blob();
-          return new File([blob], img.filename || `image_${img.id}.${img.mimeType.split('/')[1]}`, { type: img.mimeType });
+          const rawFile = new File([blob], img.filename || `image_${img.id}.${img.mimeType.split('/')[1]}`, { type: img.mimeType });
+          return await compressImage(rawFile);
         }));
         
         if (!libraryActionTarget || libraryActionTarget === 'common') {
@@ -616,49 +620,18 @@ export function PrintExpandedView(props: PrintExpandedViewProps) {
       {/* 2. 좌측 툴바 (Canvas Wrapper 우선, 없으면 Standalone Toolbar) */}
       {props.renderToolbarWrapper ? (
         props.renderToolbarWrapper({
-          undo: (
-            <ToolbarButton onClick={handleUndo} disabled={!canUndo} title="실행 취소 (Undo)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 14L4 9l5-5" />
-                <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
-              </svg>
-            </ToolbarButton>
-          ),
-          redo: (
-            <ToolbarButton onClick={handleRedo} disabled={!canRedo} title="다시 실행 (Redo)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 14l5-5-5-5" />
-                <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
-              </svg>
-            </ToolbarButton>
-          ),
-          library: (
-            <ToolbarButton onClick={() => handleOpenLibrary()} title="LIBRARY — 업로드 이미지 모음">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <path d="M21 15l-5-5L5 21" />
-              </svg>
-            </ToolbarButton>
-          ),
-          saves: (
-            <ToolbarButton onClick={handleOpenSaves} title="SAVES — 저장된 문서">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 8v13H3V8" />
-                <path d="M23 3H1v5h22V3z" />
-                <path d="M10 12h4" />
-              </svg>
-            </ToolbarButton>
-          ),
-          save: (
-            <ToolbarCircleButton onClick={handleSave} variant="save" title="현재 문서 저장 (Save)">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                <polyline points="17 21 17 13 7 13 7 21" />
-                <polyline points="7 3 7 8 15 8" />
-              </svg>
-            </ToolbarCircleButton>
-          )
+          canUndo,
+          onUndo: handleUndo,
+          canRedo,
+          onRedo: handleRedo,
+          onOpenLibrary: () => handleOpenLibrary(),
+          onOpenSaves: handleOpenSaves,
+          onSave: handleSave,
+          onNewProject: handleNewProject,
+          onZoomIn: () => {},
+          onZoomOut: () => {},
+          onZoomReset: () => {},
+          zoom: 1,
         })
       ) : (
         <Toolbar
