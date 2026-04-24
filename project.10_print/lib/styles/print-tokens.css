@@ -1,0 +1,32 @@
+/* project.10_print/lib/styles/print-tokens.css */
+:root {
+  /* 색상 */
+  --print-color-primary:     #000000;
+  --print-color-on-primary:  #FFFFFF;
+  --print-color-text:        #333333;
+  --print-color-text-muted:  #666666;
+  --print-color-placeholder: #999999;
+  --print-color-border:      #CCCCCC;
+  --print-color-divider:     #EEEEEE;
+  --print-color-bg:          #FFFFFF;
+  --print-color-bg-subtle:   #EEEEEE;
+
+  /* 폰트 */
+  --print-font-display: 'Bebas Neue', sans-serif;
+  --print-font-body:    'Pretendard', sans-serif;
+
+  /* 버튼 높이 */
+  --print-btn-height-lg: 3.25rem;  /* 52px — 주 액션 버튼 */
+  --print-btn-height-md: 2.75rem;  /* 44px — 보조 버튼, 옵션 */
+  --print-btn-height-sm: 2.25rem;  /* 36px — 소형 버튼 */
+
+  /* 곡률 */
+  --print-radius-pill: 5rem;      /* CTA 버튼 */
+  --print-radius-box:  0.625rem;  /* 입력 필드, 옵션 버튼, 카드 */
+
+  /* 간격 */
+  --print-space-1: 0.5rem;   /* 8px */
+  --print-space-2: 1rem;     /* 16px */
+  --print-space-3: 1.25rem;  /* 20px */
+  --print-space-4: 2rem;     /* 32px */
+}

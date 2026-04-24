@@ -1,7 +1,26 @@
 {
-  "name": "n10-print",
+  "name": "@cai-crete/print-components",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "main": "./lib/index.ts",
+  "exports": {
+    ".": "./lib/index.ts",
+    "./styles/*": "./lib/styles/*"
+  },
+  "files": [
+    "lib/",
+    "components/",
+    "app/components/",
+    "types/print-canvas.ts"
+  ],
+  "peerDependencies": {
+    "next": ">=15.0.0",
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "scripts": {
     "dev": "next dev -p 3777",
     "build": "next build",

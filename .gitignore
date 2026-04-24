@@ -16,3 +16,14 @@ node_modules/
 .next/
 **/.next/
 out/
+
+# Harness Engineering Files (협업 시 숨김 처리)
+/.agents/
+/.claude/
+/docs/
+/scratch/
+/harness-roadmap.html
+/AGENTS.md
+/ARCHITECTURE.md
+/DIRECTORY_STRUCTURE.md
+/package-lock.json.bak
