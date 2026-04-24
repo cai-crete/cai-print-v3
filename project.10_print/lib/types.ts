@@ -80,24 +80,7 @@ export interface LibraryFolder {
 }
 
 // ---------------------------------------------------------------------------
-// 4. 임시저장(Saves) 타입
-// ---------------------------------------------------------------------------
-
-/** 임시저장된 문서 항목 */
-export interface SavedDocument {
-  id: string
-  title: string
-  mode: PrintMode
-  pageCount: number
-  result: PrintResult
-  createdAt: string
-  updatedAt: string
-  /** 첫 번째 페이지의 썸네일 ObjectURL (선택) */
-  thumbnailUrl?: string
-}
-
-// ---------------------------------------------------------------------------
-// 5. Undo / Redo 히스토리 타입
+// 4. Undo / Redo 히스토리 타입
 // ---------------------------------------------------------------------------
 
 /** 편집 히스토리 단위 항목 */
@@ -226,7 +209,6 @@ export interface PrintAppState {
   error: string | null
   isSidebarOpen: boolean
   isLibraryOpen: boolean
-  isSavesOpen: boolean
 
   /* 히스토리 */
   history: HistoryEntry[]

@@ -10,32 +10,31 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react'
-import type { PrintExpandedViewProps } from '@/types/print-canvas'
+import type { PrintExpandedViewProps } from '../types/print-canvas'
 
 // -- Layout
-import GlobalHeader    from '@/app/components/layout/GlobalHeader'
-import Toolbar, { ToolbarButton, ToolbarCircleButton } from '@/app/components/layout/Toolbar'
-import Sidebar         from '@/app/components/layout/Sidebar'
-import Canvas          from '@/app/components/layout/Canvas'
-import PreviewStrip    from '@/app/components/layout/PreviewStrip'
+import GlobalHeader    from '../app/components/layout/GlobalHeader'
+import Toolbar, { ToolbarButton, ToolbarCircleButton } from '../app/components/layout/Toolbar'
+import Sidebar         from '../app/components/layout/Sidebar'
+import Canvas          from '../app/components/layout/Canvas'
+import PreviewStrip    from '../app/components/layout/PreviewStrip'
 
 // -- Sidebar sections
-import NodeSelector    from '@/app/components/sidebar/NodeSelector'
-import ImageInsert     from '@/app/components/sidebar/ImageInsert'
-import PurposeSelector from '@/app/components/sidebar/PurposeSelector'
-import PageCountControl from '@/app/components/sidebar/PageCountControl'
-import PromptInput     from '@/app/components/sidebar/PromptInput'
-import ActionButtons   from '@/app/components/sidebar/ActionButtons'
+import NodeSelector    from '../app/components/sidebar/NodeSelector'
+import ImageInsert     from '../app/components/sidebar/ImageInsert'
+import PurposeSelector from '../app/components/sidebar/PurposeSelector'
+import PageCountControl from '../app/components/sidebar/PageCountControl'
+import PromptInput     from '../app/components/sidebar/PromptInput'
+import ActionButtons   from '../app/components/sidebar/ActionButtons'
 
 // -- Modals
-import LibraryModal from '@/app/components/modals/LibraryModal'
-import SavesModal   from '@/app/components/modals/SavesModal'
+import LibraryModal from '../app/components/modals/LibraryModal'
 
 // -- Templates
-import ReportTemplate  from '@/app/components/templates/ReportTemplate'
-import PanelTemplate   from '@/app/components/templates/PanelTemplate'
-import DrawingTemplate from '@/app/components/templates/DrawingTemplate'
-import VideoTemplate   from '@/app/components/templates/VideoTemplate'
+import ReportTemplate  from '../app/components/templates/ReportTemplate'
+import PanelTemplate   from '../app/components/templates/PanelTemplate'
+import DrawingTemplate from '../app/components/templates/DrawingTemplate'
+import VideoTemplate   from '../app/components/templates/VideoTemplate'
 
 // -- Types
 import type {
@@ -46,24 +45,20 @@ import type {
   HistoryEntry,
   LibraryFolder,
   LibraryImage,
-  SavedDocument,
   ExportFormat,
-} from '@/lib/types'
+} from '../lib/types'
 
 // -- Export
-import { exportDocument } from '@/lib/export'
-
-// -- Saves
-import { savesGet, savesSave, savesDelete } from '@/lib/saves'
+import { exportDocument } from '../lib/export'
 
 // -- Image utils
-import { compressImage } from '@/lib/imageUtils'
+import { compressImage } from '../lib/imageUtils'
 
 // -- Thumbnail utils
-import { generateThumbnail, extractTitle } from '@/lib/thumbnailUtils'
+import { generateThumbnail } from '../lib/thumbnailUtils'
 
 // -- HTML utils
-import { splitHtmlPages } from '@/lib/htmlUtils'
+import { splitHtmlPages } from '../lib/htmlUtils'
 
 // =============================================================================
 // Helper — 에이전트 구조화 오류 전달용 클래스
@@ -139,19 +134,20 @@ export function PrintExpandedView(props: PrintExpandedViewProps) {
   const apiBaseUrl = props.apiBaseUrl ?? ''
 
   // -------------------------------------------------------------------------
-  // 상태 — 모드 & 설정
+  // 상태 — 모드 & 설정 (initialDraftState > savedState > 기본값 우선순위)
   // -------------------------------------------------------------------------
-  const [mode, setMode]               = useState<PrintMode>('REPORT')
-  const [orientation, setOrientation] = useState<PanelOrientation>('LANDSCAPE')
-  const [prompt, setPrompt]           = useState('')
-  const [pageCount, setPageCount]     = useState(6)
+  const draft = props.initialDraftState
+  const [mode, setMode]               = useState<PrintMode>(draft?.mode ?? 'REPORT')
+  const [orientation, setOrientation] = useState<PanelOrientation>(draft?.orientation ?? 'LANDSCAPE')
+  const [prompt, setPrompt]           = useState(draft?.prompt ?? '')
+  const [pageCount, setPageCount]     = useState(draft?.pageCount ?? 6)
 
   // -------------------------------------------------------------------------
   // 상태 — 이미지 입력
   // -------------------------------------------------------------------------
-  const [images, setImages]                   = useState<File[]>([])
-  const [videoStartImage, setVideoStartImage] = useState<File | null>(null)
-  const [videoEndImage, setVideoEndImage]     = useState<File | null>(null)
+  const [images, setImages]                   = useState<File[]>(draft?.images ?? [])
+  const [videoStartImage, setVideoStartImage] = useState<File | null>(draft?.videoStartImage ?? null)
+  const [videoEndImage, setVideoEndImage]     = useState<File | null>(draft?.videoEndImage ?? null)
 
   // -------------------------------------------------------------------------
   // 상태 — 결과
@@ -168,18 +164,39 @@ export function PrintExpandedView(props: PrintExpandedViewProps) {
   const [agentError, setAgentError]     = useState<AgentErrorInfo | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [isLibraryOpen, setIsLibraryOpen]       = useState(false)
-  const [isSavesOpen, setIsSavesOpen]           = useState(false)
   const [libraryFolders, setLibraryFolders]     = useState<LibraryFolder[]>([])
   const [isLibraryLoading, setIsLibraryLoading] = useState(false)
   const [libraryActionTarget, setLibraryActionTarget] = useState<'common' | 'videoStart' | 'videoEnd' | null>(null)
-  const [savedDocuments, setSavedDocuments]     = useState<SavedDocument[]>([])
-  const [currentDocId, setCurrentDocId]         = useState<string | null>(null)
+
+  // -------------------------------------------------------------------------
+  // 상태 — 캔버스 뷰 (zoom / pan) + 툴
+  // -------------------------------------------------------------------------
+  const [canvasView, setCanvasView] = useState({ zoom: 1, panX: 0, panY: 0 })
+  const [activeTool, setActiveTool] = useState<'cursor' | 'handle'>('handle')
 
   // -------------------------------------------------------------------------
   // 상태 — Undo / Redo 히스토리
   // -------------------------------------------------------------------------
   const [history, setHistory]           = useState<HistoryEntry[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
+
+  // =========================================================================
+  // Effect — Props (savedState 복원)
+  // =========================================================================
+  useEffect(() => {
+    if (!props.savedState) return;
+    // initialDraftState가 있으면 mode/prompt는 draft 값 유지 (덮어쓰지 않음)
+    if (!props.initialDraftState) {
+      setMode(props.savedState.mode);
+      if (props.savedState.prompt) setPrompt(props.savedState.prompt);
+    }
+    setResult({
+      html: props.savedState.html,
+      executionLog: {} as never,
+      slotMapping: {},
+      masterData: {},
+    });
+  }, []); // mount 시 한 번만 실행 — savedState는 초기값으로만 사용
 
   // =========================================================================
   // Effect — Props (selectedImages, initialAction)
@@ -221,6 +238,8 @@ export function PrintExpandedView(props: PrintExpandedViewProps) {
       // 아무것도 하지 않음 (기본 화면)
     }
   }, [props.initialAction]);
+
+
 
   // =========================================================================
   // 핸들러 — Library 열기 (지연 로딩) — Effect보다 먼저 선언
@@ -363,7 +382,6 @@ export function PrintExpandedView(props: PrintExpandedViewProps) {
     setAgentError(null)
     setHistory([])
     setHistoryIndex(-1)
-    setCurrentDocId(null)
   }, [])
 
   // =========================================================================
@@ -388,6 +406,17 @@ export function PrintExpandedView(props: PrintExpandedViewProps) {
       setIsExporting(false)
     }
   }, [result, mode, orientation])
+
+  // =========================================================================
+  // Effect — EXPORT 자동 실행 (초기 액션)
+  // =========================================================================
+  useEffect(() => {
+    if (props.initialAction === 'export' && result) {
+      // 확장 뷰 진입 즉시 EXPORT 동작
+      const defaultFormat = mode === 'VIDEO' ? 'mp4' : 'pdf';
+      handleExport(defaultFormat);
+    }
+  }, [props.initialAction, result, mode, handleExport]);
 
   // =========================================================================
   // 핸들러 — Library 폴더 추가
@@ -480,15 +509,8 @@ export function PrintExpandedView(props: PrintExpandedViewProps) {
   }, [libraryActionTarget])
 
   // =========================================================================
-  // 핸들러 — Saves
+  // 핸들러 — Save (Canvas 부모 앱으로 전달)
   // =========================================================================
-
-  // mount 시 localStorage에서 목록 로드
-  useEffect(() => {
-    if (!props.onSave) {
-      setSavedDocuments(savesGet())
-    }
-  }, [props.onSave])
 
   const handleSave = useCallback(async () => {
     if (!result) {
@@ -496,65 +518,18 @@ export function PrintExpandedView(props: PrintExpandedViewProps) {
       return
     }
 
+    if (!props.onSave) return
+
     const allPages = result.html ? splitHtmlPages(result.html) : []
     const firstPageHtml = allPages.length > 0 ? allPages[0] : (result.html ?? '')
-    const title = extractTitle(result, mode)
-
-    // Canvas 모드
-    if (props.onSave) {
-      const thumbnailUrl = await generateThumbnail(firstPageHtml, mode, orientation) ?? ''
-      props.onSave({
-        html: result.html ?? '',
-        thumbnail: thumbnailUrl,
-        mode,
-        metadata: result.masterData ?? {},
-      })
-      return
-    }
-
-    // Standalone 모드
-    const docId = currentDocId ?? `${Date.now()}`
-    const isNew = !currentDocId
-
-    const doc: SavedDocument = {
-      id:           docId,
-      title,
+    const thumbnailUrl = await generateThumbnail(firstPageHtml, mode, orientation) ?? ''
+    props.onSave({
+      html: result.html ?? '',
+      thumbnail: thumbnailUrl,
       mode,
-      pageCount,
-      result,
-      createdAt:    isNew ? new Date().toISOString() : (savesGet().find(d => d.id === docId)?.createdAt ?? new Date().toISOString()),
-      updatedAt:    new Date().toISOString(),
-      thumbnailUrl: await generateThumbnail(firstPageHtml, mode, orientation) ?? undefined,
-    }
-
-    const success = savesSave(doc)
-    if (success) {
-      if (isNew) setCurrentDocId(docId)
-      setSavedDocuments(savesGet())
-      window.alert('현재 문서가 SAVES에 성공적으로 저장되었습니다.')
-    } else {
-      window.alert('문서 저장에 실패했습니다. (브라우저 저장 공간 초과 등)')
-    }
-  }, [result, mode, pageCount, orientation, currentDocId, props.onSave])
-
-  const handleOpenSaves = useCallback(() => {
-    setSavedDocuments(savesGet())
-    setIsSavesOpen(true)
-  }, [])
-
-  const handleSavesOpen = useCallback((doc: SavedDocument) => {
-    setMode(doc.mode)
-    setPageCount(doc.pageCount)
-    setResult(doc.result)
-    setCurrentPage(0)
-    setError(null)
-    setCurrentDocId(doc.id)
-  }, [])
-
-  const handleSavesDelete = useCallback((docIds: string[]) => {
-    docIds.forEach((id) => savesDelete(id))
-    setSavedDocuments(savesGet())
-  }, [])
+      metadata: result.masterData ?? {},
+    })
+  }, [result, mode, orientation, props.onSave])
 
   const handleSelectImages = useCallback(async (imgs: LibraryImage[]) => {
     const files = await Promise.all(imgs.map(async img => {
@@ -634,13 +609,14 @@ export function PrintExpandedView(props: PrintExpandedViewProps) {
           canRedo,
           onRedo: handleRedo,
           onOpenLibrary: () => handleOpenLibrary(),
-          onOpenSaves: handleOpenSaves,
           onSave: handleSave,
           onNewProject: handleNewProject,
-          onZoomIn: () => {},
-          onZoomOut: () => {},
-          onZoomReset: () => {},
-          zoom: 1,
+          onZoomIn:    () => setCanvasView(v => ({ ...v, zoom: Math.min(8, v.zoom * 1.2) })),
+          onZoomOut:   () => setCanvasView(v => ({ ...v, zoom: Math.max(0.1, v.zoom / 1.2) })),
+          onZoomReset: () => setCanvasView({ zoom: 1, panX: 0, panY: 0 }),
+          zoom: canvasView.zoom,
+          activeTool,
+          onToolChange: setActiveTool,
         })
       ) : (
         <Toolbar
@@ -649,7 +625,6 @@ export function PrintExpandedView(props: PrintExpandedViewProps) {
           onUndo={handleUndo}
           onRedo={handleRedo}
           onOpenLibrary={() => handleOpenLibrary()}
-          onOpenSaves={handleOpenSaves}
           onSave={handleSave}
           onNewProject={handleNewProject}
         />
@@ -659,6 +634,11 @@ export function PrintExpandedView(props: PrintExpandedViewProps) {
       <Canvas
         isEmpty={!result}
         isLoading={isGenerating}
+        zoom={canvasView.zoom}
+        panX={canvasView.panX}
+        panY={canvasView.panY}
+        onViewChange={setCanvasView}
+        activeTool={activeTool}
       >
         {renderDocument()}
       </Canvas>
@@ -875,14 +855,6 @@ export function PrintExpandedView(props: PrintExpandedViewProps) {
         onAddImagesToFolder={handleLibraryCopyImages}
       />
 
-      {/* 7. 모달 — Saves */}
-      <SavesModal
-        isOpen={isSavesOpen}
-        onClose={() => setIsSavesOpen(false)}
-        documents={savedDocuments}
-        onOpen={handleSavesOpen}
-        onDeleteBatch={handleSavesDelete}
-      />
     </div>
   )
 }

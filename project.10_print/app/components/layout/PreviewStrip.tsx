@@ -12,8 +12,8 @@
  */
 
 import React, { useState, useRef } from 'react'
-import type { PrintMode, PanelOrientation } from '@/lib/types'
-import { DOC_SIZE, docSizeKey } from '@/lib/types'
+import type { PrintMode, PanelOrientation } from '../../../lib/types'
+import { DOC_SIZE, docSizeKey } from '../../../lib/types'
 
 const THUMB_W = 80  // 5rem
 const THUMB_H = 64  // 4rem

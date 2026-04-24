@@ -7,7 +7,7 @@
  */
 
 import React from 'react'
-import type { DocumentTemplateProps, PanelOrientation } from '@/lib/types'
+import type { DocumentTemplateProps, PanelOrientation } from '../../../lib/types'
 import DocumentFrame from './DocumentFrame'
 
 interface PanelTemplateProps extends DocumentTemplateProps {

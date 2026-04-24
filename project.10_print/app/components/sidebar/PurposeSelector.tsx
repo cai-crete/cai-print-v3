@@ -12,7 +12,7 @@
  */
 
 import React from 'react'
-import type { PrintMode, PanelOrientation } from '@/lib/types'
+import type { PrintMode, PanelOrientation } from '../../../lib/types'
 
 interface PurposeSelectorProps {
   label: string

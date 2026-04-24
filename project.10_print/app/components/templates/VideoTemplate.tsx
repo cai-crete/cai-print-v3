@@ -8,7 +8,7 @@
  */
 
 import React from 'react'
-import type { VideoTemplateProps } from '@/lib/types'
+import type { VideoTemplateProps } from '../../../lib/types'
 
 export default function VideoTemplate({ videoUri, isLoading }: VideoTemplateProps) {
   // 1. 영상 생성 중 (Loading State) — 프로토콜 §IV '건축적 로딩 보드'

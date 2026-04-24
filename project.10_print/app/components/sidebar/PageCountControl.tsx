@@ -11,7 +11,7 @@
  */
 
 import React from 'react'
-import type { PrintMode } from '@/lib/types'
+import type { PrintMode } from '../../../lib/types'
 
 interface PageCountControlProps {
   label: string

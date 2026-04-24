@@ -7,7 +7,7 @@
  */
 
 import React from 'react'
-import type { DocumentTemplateProps } from '@/lib/types'
+import type { DocumentTemplateProps } from '../../../lib/types'
 import DocumentFrame from './DocumentFrame'
 
 export default function DrawingTemplate({

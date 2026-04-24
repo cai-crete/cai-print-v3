@@ -13,7 +13,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // ── 요청 수신 로깅 ──
   const origin = request.headers.get('origin') ?? ''
+  const contentLength = request.headers.get('content-length') ?? 'unknown'
+  const hasSecret = request.headers.has('x-canvas-api-secret')
+  console.log(`\n[print-server] ▶ ${request.method} ${request.nextUrl.pathname}`)
+  console.log(`[print-server]   Origin: ${origin || '(same-origin)'}`)
+  console.log(`[print-server]   Content-Length: ${contentLength}, Secret: ${hasSecret ? 'YES' : 'NO'}`)
   
   // 1. CORS Preflight (OPTIONS) 요청 처리
   if (request.method === 'OPTIONS') {
@@ -41,9 +47,10 @@ export function middleware(request: NextRequest) {
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-canvas-api-secret')
   }
 
-  // 3. API 시크릿 보안 검증
+  // 3. API 시크릿 보안 검증 (cross-origin 요청에만 적용)
+  // same-origin 요청(standalone 모드)에서는 브라우저가 Origin 헤더를 보내지 않으므로 검증 생략
   const secretKey = process.env.CANVAS_API_SECRET
-  if (secretKey) {
+  if (secretKey && origin) {
     const providedSecret = request.headers.get('x-canvas-api-secret')
     if (!providedSecret || providedSecret !== secretKey) {
       return NextResponse.json(

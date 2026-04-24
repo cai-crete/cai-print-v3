@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import type { LibraryFolder, LibraryImage } from '@/lib/types'
+import type { LibraryFolder, LibraryImage } from '../../../lib/types'
 
 interface LibraryModalProps {
   isOpen: boolean

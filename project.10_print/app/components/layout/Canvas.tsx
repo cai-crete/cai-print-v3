@@ -89,37 +89,35 @@ interface CanvasProps {
   panX?: number
   panY?: number
   onViewChange?: (view: { zoom: number, panX: number, panY: number }) => void
+  activeTool?: 'cursor' | 'handle'
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function Canvas({ children, isEmpty, isLoading, zoom, panX, panY, onViewChange }: CanvasProps) {
+export default function Canvas({ children, isEmpty, isLoading, zoom, panX, panY, onViewChange, activeTool = 'handle' }: CanvasProps) {
   const viewportRef                = useRef<HTMLDivElement>(null)
   const [internalView, dispatch]   = useReducer(viewReducer, INITIAL_VIEW)
   const [isDragging, setIsDragging] = useState(false)
-  
+
   const isControlled = zoom !== undefined && panX !== undefined && panY !== undefined
   const view = isControlled ? { zoom, panX, panY } : internalView
-  
-  const handleViewChange = useCallback((newView: ViewState) => {
-    if (onViewChange) onViewChange(newView)
-    if (!isControlled) {
-      dispatch({ type: 'PAN_TO', x: newView.panX, y: newView.panY }) // This is a bit hacky but works since we'll use dispatch for internal
-    }
-  }, [isControlled, onViewChange])
 
-  // Custom dispatch that also calls onViewChange
+  // dispatch wrapper that also calls onViewChange for controlled mode
   const customDispatch = useCallback((action: ViewAction) => {
     const nextView = viewReducer(view, action)
     if (onViewChange) onViewChange(nextView)
     if (!isControlled) dispatch(action)
   }, [view, isControlled, onViewChange])
 
-  const dragRef = useRef<{ sx: number; sy: number; px: number; py: number } | null>(null)
-  const viewRef = useRef(view)
-  viewRef.current = view
+  const dragRef          = useRef<{ sx: number; sy: number; px: number; py: number } | null>(null)
+  const viewRef          = useRef(view)
+  const customDispatchRef = useRef(customDispatch)
+  const activeToolRef     = useRef(activeTool)
+  viewRef.current          = view
+  customDispatchRef.current = customDispatch
+  activeToolRef.current     = activeTool
 
   // -------------------------------------------------------------------------
   // 휠 줌 — 마운트 시 1회 등록 (viewRef로 최신 zoom 참조)
@@ -134,7 +132,7 @@ export default function Canvas({ children, isEmpty, isLoading, zoom, panX, panY,
       const cursorX = e.clientX - rect.left
       const cursorY = e.clientY - rect.top
       const factor  = e.deltaY < 0 ? 1.1 : 0.9
-      dispatch({
+      customDispatchRef.current({
         type:    'ZOOM_TO',
         zoom:    viewRef.current.zoom * factor,
         cursorX,
@@ -151,6 +149,7 @@ export default function Canvas({ children, isEmpty, isLoading, zoom, panX, panY,
   // -------------------------------------------------------------------------
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return
+    if (activeToolRef.current !== 'handle') return
     dragRef.current = { sx: e.clientX, sy: e.clientY, px: view.panX, py: view.panY }
     setIsDragging(true)
   }, [view.panX, view.panY])
@@ -158,7 +157,7 @@ export default function Canvas({ children, isEmpty, isLoading, zoom, panX, panY,
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const d = dragRef.current
     if (!d) return
-    dispatch({ type: 'PAN_TO', x: d.px + (e.clientX - d.sx), y: d.py + (e.clientY - d.sy) })
+    customDispatchRef.current({ type: 'PAN_TO', x: d.px + (e.clientX - d.sx), y: d.py + (e.clientY - d.sy) })
   }, [])
 
   const endDrag = useCallback(() => {
@@ -171,7 +170,7 @@ export default function Canvas({ children, isEmpty, isLoading, zoom, panX, panY,
     return () => window.removeEventListener('mouseup', endDrag)
   }, [endDrag])
 
-  const handleDoubleClick = useCallback(() => dispatch({ type: 'RESET' }), [])
+  const handleDoubleClick = useCallback(() => customDispatchRef.current({ type: 'RESET' }), [])
 
   const gridSize = 24
 
@@ -192,8 +191,8 @@ export default function Canvas({ children, isEmpty, isLoading, zoom, panX, panY,
         `,
         backgroundSize:     `${gridSize * view.zoom}px ${gridSize * view.zoom}px`,
         backgroundPosition: `${view.panX}px ${view.panY}px`,
-        cursor:     isDragging ? 'grabbing' : 'grab',
-        userSelect: 'none',
+        cursor:     activeTool === 'cursor' ? 'default' : isDragging ? 'grabbing' : 'grab',
+        userSelect: activeTool === 'cursor' ? 'text' : 'none',
       }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}

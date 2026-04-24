@@ -513,16 +513,43 @@ export async function POST(request: Request) {
 
     // ── 이미지 후처리: src="imageId" → src="data:...;base64,..." 직접 치환 ─
     const imageDataMap: Record<string, string> = {};
+    const imageDataList: string[] = []
     agent1.images.forEach((img, idx) => {
       if (idx < contentsParts.length) {
         const { data, mimeType } = contentsParts[idx].inlineData
-        imageDataMap[img.id] = `data:${mimeType};base64,${data}`
+        const dataUri = `data:${mimeType};base64,${data}`
+        imageDataMap[img.id] = dataUri
+        imageDataList.push(dataUri)
       }
     })
 
     let finalHtml = agent2Phase2.html ?? ''
+
+    // Step 1: src="imageId" 또는 src='imageId' 치환 (큰따옴표 · 작은따옴표 모두 처리)
+    let replacementCount = 0
     for (const [imageId, dataUri] of Object.entries(imageDataMap)) {
+      const before = finalHtml
       finalHtml = finalHtml.split(`src="${imageId}"`).join(`src="${dataUri}"`)
+      finalHtml = finalHtml.split(`src='${imageId}'`).join(`src="${dataUri}"`)
+      if (finalHtml !== before) replacementCount++
+    }
+    console.log(`[print-api] images:${imageDataList.length}, src-replacements:${replacementCount}`)
+
+    // Step 2: 폴백 — img-box div 안에 <img>가 없는 슬롯에 이미지를 순서대로 주입
+    // (AI가 <img> 태그를 생성하지 않았거나 src 패턴이 달라 Step 1에서 누락된 경우)
+    if (imageDataList.length > 0) {
+      let fallbackIdx = 0
+      finalHtml = finalHtml.replace(
+        /<div([^>]*class="[^"]*img-box[^"]*"[^>]*)>\s*<\/div>/g,
+        (_match, attrs: string) => {
+          if (fallbackIdx < imageDataList.length) {
+            const dataUri = imageDataList[fallbackIdx++]
+            return `<div${attrs}><img src="${dataUri}" style="width:100%;height:100%;object-fit:cover;"></div>`
+          }
+          return _match
+        }
+      )
+      console.log(`[print-api] fallback-injected:${fallbackIdx}`)
     }
 
     return NextResponse.json({

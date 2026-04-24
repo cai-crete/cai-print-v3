@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react'
-import type { ExportFormat, PrintMode } from '@/lib/types'
+import type { ExportFormat, PrintMode } from '../../../lib/types'
 
 interface ActionButtonsProps {
   canGenerate:  boolean

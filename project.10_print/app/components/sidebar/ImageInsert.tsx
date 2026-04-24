@@ -9,9 +9,9 @@
  * COPYRIGHTS 2026. CRE-TE CO.,LTD. ALL RIGHTS RESERVED.
  */
 
-import React, { useRef, useState, useEffect, useMemo, Fragment } from 'react'
-import type { PrintMode } from '@/lib/types'
-import { compressImage } from '@/lib/imageUtils'
+import React, { useRef, useState, useEffect, Fragment } from 'react'
+import type { PrintMode } from '../../../lib/types'
+import { compressImage } from '../../../lib/imageUtils'
 
 interface ImageInsertProps {
   label: string
@@ -128,11 +128,13 @@ function ImageThumbnail({
   file: File
   onRemove: () => void
 }) {
-  const url = useMemo(() => URL.createObjectURL(file), [file.name, file.lastModified, file.size])
+  const [url, setUrl] = useState<string | null>(null)
 
   useEffect(() => {
-    return () => URL.revokeObjectURL(url)
-  }, [url])
+    const objectUrl = URL.createObjectURL(file)
+    setUrl(objectUrl)
+    return () => URL.revokeObjectURL(objectUrl)
+  }, [file])
 
   return (
     <div
@@ -146,11 +148,13 @@ function ImageThumbnail({
         border: '1px solid var(--color-gray-200)',
       }}
     >
-      <img
-        src={url}
-        alt={file.name}
-        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-      />
+      {url && (
+        <img
+          src={url}
+          alt={file.name}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      )}
       <button
         onClick={onRemove}
         className="absolute top-0.5 right-0.5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"

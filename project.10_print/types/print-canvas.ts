@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { PrintMode, PanelOrientation } from '../lib/types';
 
 export interface SelectedImage {
   id: string;
@@ -24,20 +25,39 @@ export interface PrintSaveResult {
 export interface PrintToolbarTools {
   canUndo: boolean;
   onUndo: () => void;
-  
+
   canRedo: boolean;
   onRedo: () => void;
-  
+
   onOpenLibrary: () => void;
-  onOpenSaves: () => void;
   onSave: () => Promise<void> | void;
-  
-  // 🟢 신규 추가 요청
+
   onNewProject: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomReset?: () => void;
   zoom: number;
+
+  activeTool: 'cursor' | 'handle';
+  onToolChange: (t: 'cursor' | 'handle') => void;
+}
+
+/** 사이드바에서 GENERATE 클릭 전까지 쌓인 Draft 상태 */
+export interface PrintDraftState {
+  mode: PrintMode;
+  orientation: PanelOrientation;
+  prompt: string;
+  images: File[];
+  videoStartImage: File | null;
+  videoEndImage: File | null;
+  pageCount: number;
+}
+
+export interface PrintCanvasSidebarPanelProps {
+  savedState?: PrintSavedState;
+  thumbnail?: string;
+  onAction: (action: 'generate' | 'export' | 'saves', draft: PrintDraftState) => void;
+  className?: string;
 }
 
 export interface PrintExpandedViewProps {
@@ -48,7 +68,10 @@ export interface PrintExpandedViewProps {
   savedState?: PrintSavedState;
 
   // 사이드바에서 시작된 액션 → 해당 기능으로 바로 진입
-  initialAction?: 'generate' | 'library' | 'video' | null;
+  initialAction?: 'generate' | 'library' | 'export' | 'video' | null;
+
+  // 사이드바에서 인계받은 Draft 상태
+  initialDraftState?: PrintDraftState;
 
   // Canvas 프록시 경로 (standalone일 때는 '' 또는 생략)
   apiBaseUrl?: string;
@@ -73,7 +96,7 @@ export interface PrintSidebarPanelProps {
   thumbnail?: string; // base64 PNG
 
   // 사이드바 액션 → Canvas가 이 값으로 initialAction 설정 후 Expand
-  onAction: (action: 'generate' | 'library' | 'video') => void;
+  onAction: (action: 'generate' | 'library' | 'export' | 'video') => void;
 
   className?: string;
 }

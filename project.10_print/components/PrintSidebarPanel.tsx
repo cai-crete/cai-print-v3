@@ -11,7 +11,7 @@
  */
 
 import React from 'react'
-import type { PrintSidebarPanelProps } from '@/types/print-canvas'
+import type { PrintSidebarPanelProps } from '../types/print-canvas'
 
 export function PrintSidebarPanel(props: PrintSidebarPanelProps) {
   const { savedState, thumbnail, onAction, className } = props
