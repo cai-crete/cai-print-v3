@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Bebas_Neue } from 'next/font/google'
 import localFont from 'next/font/local'
 import './globals.css'
+import '../lib/styles/print-tokens.css'
 
 const bebas = Bebas_Neue({
   weight: '400',
