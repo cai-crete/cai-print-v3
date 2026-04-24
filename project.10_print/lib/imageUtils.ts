@@ -12,12 +12,12 @@
  * 이미 한도 이하라면 원본을 그대로 반환한다.
  *
  * @param file      압축 대상 File 객체
- * @param maxBytes  허용 최대 바이트 (기본값: 19 * 1024 * 1024 = 19MB)
+ * @param maxBytes  허용 최대 바이트 (기본값: 2 * 1024 * 1024 = 2MB)
  * @returns         압축된 File (또는 원본)
  */
 export async function compressImage(
   file: File,
-  maxBytes: number = 19 * 1024 * 1024
+  maxBytes: number = 2 * 1024 * 1024
 ): Promise<File> {
   // 이미 한도 이하면 원본 반환
   if (file.size <= maxBytes) return file

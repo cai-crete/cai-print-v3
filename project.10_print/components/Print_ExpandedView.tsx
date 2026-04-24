@@ -104,6 +104,15 @@ async function callPrintApi(
   }
 
   const res = await fetch(`${apiBaseUrl}/api/print`, { method: 'POST', body: formData })
+
+  // 비-JSON 응답 방어 (프록시 413/500 에러 등)
+  const contentType = res.headers.get('content-type') ?? ''
+  if (!contentType.includes('application/json')) {
+    const text = await res.text()
+    throw new Error(
+      `서버가 예상하지 않은 응답을 반환했습니다 (HTTP ${res.status}): ${text.slice(0, 100)}`
+    )
+  }
   const data = await res.json()
 
   if (!res.ok) {

@@ -85,16 +85,38 @@ interface CanvasProps {
   children?: React.ReactNode
   isEmpty: boolean
   isLoading: boolean
+  zoom?: number
+  panX?: number
+  panY?: number
+  onViewChange?: (view: { zoom: number, panX: number, panY: number }) => void
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function Canvas({ children, isEmpty, isLoading }: CanvasProps) {
+export default function Canvas({ children, isEmpty, isLoading, zoom, panX, panY, onViewChange }: CanvasProps) {
   const viewportRef                = useRef<HTMLDivElement>(null)
-  const [view, dispatch]           = useReducer(viewReducer, INITIAL_VIEW)
+  const [internalView, dispatch]   = useReducer(viewReducer, INITIAL_VIEW)
   const [isDragging, setIsDragging] = useState(false)
+  
+  const isControlled = zoom !== undefined && panX !== undefined && panY !== undefined
+  const view = isControlled ? { zoom, panX, panY } : internalView
+  
+  const handleViewChange = useCallback((newView: ViewState) => {
+    if (onViewChange) onViewChange(newView)
+    if (!isControlled) {
+      dispatch({ type: 'PAN_TO', x: newView.panX, y: newView.panY }) // This is a bit hacky but works since we'll use dispatch for internal
+    }
+  }, [isControlled, onViewChange])
+
+  // Custom dispatch that also calls onViewChange
+  const customDispatch = useCallback((action: ViewAction) => {
+    const nextView = viewReducer(view, action)
+    if (onViewChange) onViewChange(nextView)
+    if (!isControlled) dispatch(action)
+  }, [view, isControlled, onViewChange])
+
   const dragRef = useRef<{ sx: number; sy: number; px: number; py: number } | null>(null)
   const viewRef = useRef(view)
   viewRef.current = view
