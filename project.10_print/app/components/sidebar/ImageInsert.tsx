@@ -31,7 +31,7 @@ interface ImageInsertProps {
   onLibraryRequest?: (target: 'common' | 'videoStart' | 'videoEnd') => void
 }
 
-const ACCEPT_TYPES = 'image/jpeg,image/png,image/webp'
+const ACCEPT_TYPES = 'image/jpeg,image/png'
 
 /** 이미지 업로드 트리거 버튼 (+) */
 function AddButton({ onClickDevice, onClickLibrary }: { onClickDevice: () => void, onClickLibrary: () => void }) {
@@ -367,6 +367,10 @@ export default function ImageInsert({
       </div>
 
       {mode === 'VIDEO' ? (
+        <>
+        <p className="text-ui-caption text-[--color-gray-400] mb-3">
+          시작과 종료 이미지는 동일 건물을 삽입해 주세요.
+        </p>
         <div className="flex items-end gap-2 px-1">
           <VideoSlot
             label="START"
@@ -403,6 +407,7 @@ export default function ImageInsert({
             onLibraryUpload={() => onLibraryRequest?.('videoEnd')}
           />
         </div>
+        </>
       ) : (
         <div className="flex flex-nowrap overflow-x-auto gap-2 pb-2 -mx-1 px-1 custom-scrollbar">
           {images.map((file, index) => (

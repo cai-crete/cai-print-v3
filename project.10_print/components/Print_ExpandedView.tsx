@@ -52,7 +52,7 @@ import type {
 import { exportDocument } from '../lib/export'
 
 // -- Image utils
-import { compressImage } from '../lib/imageUtils'
+import { compressImage, centerCropTo16by9 } from '../lib/imageUtils'
 
 // -- Thumbnail utils
 import { generateThumbnail } from '../lib/thumbnailUtils'
@@ -94,8 +94,8 @@ async function callPrintApi(
       formData.append('images', image)
     }
   } else if (mode === 'VIDEO') {
-    if (videoStartImage) formData.append('images', videoStartImage)
-    if (videoEndImage)   formData.append('images', videoEndImage)
+    if (videoStartImage) formData.append('images', await centerCropTo16by9(videoStartImage))
+    if (videoEndImage)   formData.append('images', await centerCropTo16by9(videoEndImage))
   }
 
   const res = await fetch(`${apiBaseUrl}/api/print`, { method: 'POST', body: formData })

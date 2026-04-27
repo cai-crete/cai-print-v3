@@ -34,7 +34,7 @@ function falErrorDetail(err: unknown): string {
 // SECURITY.md §입력 검증
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024 // 20MB
 const MAX_PROMPT_LENGTH = 2000
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png']
 
 // RELIABILITY.md §API 안정성
 const API_TIMEOUT_MS = 90_000
@@ -225,7 +225,7 @@ export async function POST(request: Request) {
     for (const file of files) {
       if (!ALLOWED_MIME_TYPES.includes(file.type)) {
         return NextResponse.json(
-          { error: `허용되지 않는 파일 형식입니다. JPEG, PNG, WebP만 가능합니다. (${file.name})` },
+          { error: `허용되지 않는 파일 형식입니다. JPEG, PNG만 가능합니다. (${file.name})` },
           { status: 400 }
         )
       }

@@ -7,10 +7,25 @@
  * COPYRIGHTS 2026. CRE-TE CO.,LTD. ALL RIGHTS RESERVED.
  */
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import type { VideoTemplateProps } from '../../../lib/types'
 
+// fal.ai 영상 TTL 안내 문구 — fal.ai 정책 변경 시 이 상수만 갱신
+const FAL_VIDEO_TTL_NOTICE = '이 영상은 약 1시간 후 만료됩니다. 지금 다운로드하세요.'
+
 export default function VideoTemplate({ videoUri, isLoading }: VideoTemplateProps) {
+  const [videoError, setVideoError] = useState(false)
+
+  // videoUri 변경 시 오류 상태 초기화
+  useEffect(() => {
+    setVideoError(false)
+  }, [videoUri])
+
+  const handleVideoError = () => {
+    setVideoError(true)
+    console.warn('[VIDEO QA] D등급 — 영상 로드 실패 (URL 만료 또는 오류). 시각 QA 체크리스트를 확인하세요.')
+  }
+
   // 1. 영상 생성 중 (Loading State) — 프로토콜 §IV '건축적 로딩 보드'
   if (isLoading && !videoUri) {
     return (
@@ -87,15 +102,27 @@ export default function VideoTemplate({ videoUri, isLoading }: VideoTemplateProp
         backgroundColor: '#000',
       }}
     >
-      <video
-        src={videoUri}
-        controls
-        autoPlay
-        loop
-        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-      >
-        브라우저가 비디오 태그를 지원하지 않습니다.
-      </video>
+      {videoError ? (
+        <div className="w-full h-full flex flex-col items-center justify-center gap-3" style={{ color: '#fff' }}>
+          <span style={{ fontSize: '0.875rem' }}>영상을 불러올 수 없습니다.</span>
+          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', textAlign: 'center', padding: '0 1rem' }}>
+            {FAL_VIDEO_TTL_NOTICE}
+          </span>
+        </div>
+      ) : (
+        <video
+          src={videoUri}
+          controls
+          autoPlay
+          loop
+          playsInline
+          muted
+          onError={handleVideoError}
+          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+        >
+          브라우저가 비디오 태그를 지원하지 않습니다.
+        </video>
+      )}
     </div>
   )
 }
